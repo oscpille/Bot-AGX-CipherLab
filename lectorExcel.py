@@ -1,31 +1,61 @@
 import pandas as pd
+import unicodedata # <--- NUEVA LIBRERÍA (Ya viene en Python, no hay que instalar nada)
 
-# 1. Definir las rutas
-ruta_excel = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\FORMATO DE SOLICITUD DE AGX.xlsx"
-ruta_csv_salida = r"C:\Users\dell\Documents\Bot AGX\UltimaFila.csv"
+# --- FUNCIÓN PARA LIMPIAR TEXTOS (Quita acentos y mayúsculas) ---
+def limpiar_texto(texto):
+    # Transforma 'Día' -> 'dia', 'Categoría' -> 'categoria'
+    texto_sin_acentos = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
+    return texto_sin_acentos.lower().strip()
+
+# 1. Leer el archivo CSV que acabamos de generar
+ruta_csv = r"C:\Users\dell\Documents\Bot AGX\UltimaFila.csv"
 
 try:
-    # 2. Leer SOLO las columnas de la F a la K del Excel
-    # El parámetro usecols="F:K" evita cargar en memoria datos innecesarios
-    df = pd.read_excel(ruta_excel, usecols="F:K", engine='openpyxl')
-
-    # 3. Extraer únicamente la última fila
-    # Al usar [-1:] en lugar de [-1], mantenemos la estructura de tabla (DataFrame)
-    ultima_fila = df.iloc[-1:]
-
-    # 4. Convertir y guardar en formato CSV
-    # index=False evita que se imprima el número de fila original
-    # encoding='utf-8-sig' garantiza que los acentos y caracteres especiales no se rompan
-    ultima_fila.to_csv(ruta_csv_salida, index=False, encoding='utf-8-sig')
-
-    print("✅ ¡Éxito! La extracción se completó correctamente.")
-    print(f"El archivo se guardó como: {ruta_csv_salida}")
+    df_csv = pd.read_csv(ruta_csv, encoding='utf-8-sig')
+    solicitud = df_csv.iloc[0]
     
-    # Imprimir en consola para validación visual rápida
-    print("\n--- Vista previa de los datos extraídos ---")
-    print(ultima_fila.to_string(index=False))
+    cliente = solicitud['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']
+    datos_crudos = str(solicitud['DATOS REQUERIDOS'])
+    
+    print(f"📦 Procesando Inventario para: {cliente}")
+    print("-" * 40)
+    
+    configuracion_agx = {}
+    lineas = datos_crudos.split('\n')
+    
+    for linea in lineas:
+        linea = linea.strip()
+        if not linea or ':' not in linea:
+            continue
+            
+        partes = linea.split(':')
+        
+        # --- BLINDAJE DEL NOMBRE DEL DATO ---
+        nombre_original = partes[0].strip() # Ej: "Día" (Para usarlo en la pantalla del lector)
+        nombre_logico = limpiar_texto(nombre_original) # Ej: "dia" (Para que el bot sepa qué es)
+        
+        # --- BLINDAJE DE LAS REGLAS (El problema del guion) ---
+        # Apretamos los guiones: "1 - 3" o "1- 3" o "1 -3" se convierten en "1-3"
+        reglas_limpias = partes[1].replace(" - ", "-").replace("- ", "-").replace(" -", "-")
+        
+        # Ahora sí, separamos por espacios de forma segura
+        reglas = reglas_limpias.strip().split()
+        
+        if len(reglas) >= 2:
+            longitud = reglas[0]
+            # También limpiamos el tipo de dato por si escriben "NUM" en mayúsculas
+            tipo_dato = limpiar_texto(reglas[1]) 
+            
+            # Guardamos todo en el diccionario usando el nombre_logico como llave principal
+            configuracion_agx[nombre_logico] = {
+                'nombre_pantalla': nombre_original,
+                'longitud': longitud,
+                'tipo': tipo_dato
+            }
 
-except FileNotFoundError:
-    print("❌ Error: No se pudo encontrar el archivo de Excel. Verifica que la ruta y el nombre sean correctos y que OneDrive esté sincronizado.")
+    print("✅ Datos extraídos, limpiados y entendidos por el Bot:\n")
+    for dato_logico, config in configuracion_agx.items():
+        print(f"➤ ID Bot: {dato_logico.ljust(10)} | Pantalla: {config['nombre_pantalla'].ljust(12)} | Min-Max: {config['longitud'].ljust(8)} | Tipo: {config['tipo']}")
+
 except Exception as e:
-    print(f"❌ Ocurrió un error inesperado: {e}")   
+    print(f"❌ Error al procesar el CSV: {e}")
