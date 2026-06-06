@@ -1,0 +1,52 @@
+Se debe indicar la longitud de cada dato a capturar según la base de datos del cliente.
+
+Abierto: Ese no tiene "candado", lo que se escanea pasa, no se le carga una base de datos o catálogo.
+
+Cerrado: Se agrega una base de datos, se le pone un candado cuando x código no está dentro de la base no se toma en cuenta, se muestra un código de no encontrado.
+
+Forzado: Se le carga una base pero también deja entrar códigos que no están dentro de la base.
+
+Como nota, en todos es necesario escanear con el scaner y tecleando, en caso de que el lector no quiera leer un código este se digita manualmente.
+
+Lo primero en mostrarse en pantalla será el menú: 
+
+1. Levanta (Cargará la patalla de bievenida)
+2. Descarga (Descargará los datos desde la cuna)
+3. Utlerías (Configuración del equipo)
+
+Se requiere una pantalla de bienvenida tipo (del renglón 1 al 8, en "SHOWROOM MEDICAMENTOS" se le debe agregar ABTO o CDO según sea abierto o cerrado antes de iniciar):
+ 
+"Bienvenido a
+Profesionales
+en inventarios
+
+SHOWROOM
+MEDICAMENTOS"
+
+Y otro menú donde te indique el tipo de inventario (Pieza x Pieza) por ej:
+
+"TIPO DE INVENTARIO:
+
+1. Pieza x Pieza"
+
+Después de seleccionar el tipo de Inventario, se procede con una pantalla donde viene:
+
+*Nombre del inventario*
+Contraseña: ***** (5 asteriscos)
+Operador: (se digita el num de empleado)
+
+VOL (o Pz x Pz según sea el caso)
+1
+
+Una vez se sigite el num de empleado pasaremos al menú que pide Marbete y Ubicación y de ahí al bucle infinito.
+
+El ejercicio será crear un AGX Abierto y uno Cerrado con las siguientes características:
+
+Marbete de 5
+Ubicación Longitud de 11 alfanum
+SKU de 4 a 20 dígitos
+Lotes alfanum min 2 max 15
+Fechas de caducidad día 2, mes 2, año 4
+
+pieza a pieza
+Todo separado por "|", no por comas
