@@ -2,6 +2,12 @@ import pandas as pd
 import pyautogui
 import time
 import sys # Nos sirve para detener el bot por completo si hay un error
+# Al inicio de tu bot, junto a tus otros imports:
+from mapeo_batch import MAPA_UI
+
+# ¡Listo! Ya puedes usar las coordenadas directamente:
+coord_x_prompt = MAPA_UI["vista_form"]["tabla"]["columnas_x"]["prompt"]
+print(f"El bot hará clic en la coordenada X: {coord_x_prompt}")
 
 # --- FASE 1: LEER EL CSV Y OBTENER EL CLIENTE ---
 ruta_csv = r"C:\Users\dell\Documents\Bot AGX\UltimaFila.csv"
