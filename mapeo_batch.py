@@ -14,20 +14,26 @@ MAPA_UI = {
         "lookup": (300, 430),
         "form": {
             "coords": (300, 500),
-            "comportamiento": "hacer_scroll_arriba" # ALERTA: Ejecutar scroll después de click
+            "comportamiento": "hacer_scroll_arriba" 
         }
     },
     
     "vista_menu": {
         "menu_1": (370, 260),
+        "menu_2": (365, 276), # <-- NUEVO
         "items": {
             "item_1": {"coords": (850, 230), "accion": "1_click_copiar_borrar"},
-            "item_2": {"coords": (850, 255), "accion": "1_click_copiar_borrar"}
+            "item_2": {"coords": (850, 255), "accion": "1_click_copiar_borrar"},
+            "item_5": {"coords": (850, 315), "accion": "1_click_copiar_borrar"}, # <-- NUEVO
+            "item_6": {"coords": (850, 333), "accion": "1_click_copiar_borrar"}, # <-- NUEVO
+            "item_7": {"coords": (850, 350), "accion": "1_click_copiar_borrar"}  # <-- NUEVO
         },
         "next_dropdowns": {
-            # Imposible navegar con flechas, clics fijos
             "next_1": {"coords": (1000, 230), "form_2": (1000, 275), "form_5": (1000, 317)},
-            "next_2": {"coords": (1000, 255), "form_2": (1000, 296), "form_5": (1000, 335)}
+            "next_2": {"coords": (1000, 255), "form_2": (1000, 296), "form_5": (1000, 335)},
+            "next_5": {"coords": (1000, 315), "menu_2": (1000, 490)}, # <-- Clics físicos agregados
+            "next_6": {"coords": (1000, 333), "menu_2": (1000, 509)}, # <-- Clics físicos agregados
+            "next_7": {"coords": (1000, 350), "menu_2": (1000, 528)}  # <-- Clics físicos agregados
         }
     },
     
@@ -56,29 +62,25 @@ MAPA_UI = {
             "form_4": (365, 565),
             "form_5": (365, 585),
             "form_6": (365, 600),
-            "form_7": {"coords": (365, 612), "comportamiento": "hacer_scroll_arriba"} # ALERTA
+            "form_7": {"coords": (365, 612), "comportamiento": "hacer_scroll_arriba"}
         },
         
-        # --- LA TABLA PRINCIPAL ---
-        # Gracias a tu mapeo diagonal, extrapolamos las coordenadas (X es la columna, Y es la fila)
         "tabla": {
             "columnas_x": {
                 "data_type": 554,
-                "prompt": 665,         # 1 click copiar/borrar
+                "prompt": 665,
                 "input_type": 765,
-                "min_length": 834,     # 1 click copiar/borrar
-                "max_length": 903,     # 1 click copiar/borrar
+                "min_length": 834,
+                "max_length": 903,
                 "variables_field": 978,
                 "more": 1047
             },
-            # Y basado en tu diagonal: [R1, R2, R3, R4, R5, R6, R7, R8]
             "filas_y": [445, 462, 487, 506, 527, 547, 566, 581],
             
-            # --- LÓGICA DE TIPOS DE DATOS ---
             "logica_data_type": {
-                "truco_reset": "n", # Presionar siempre 'N' antes de la secuencia para ir a Nil
+                "truco_reset": "n",
                 "secuencias": {
-                    "nil":        {"tecla": "n", "pulsaciones": 0}, # Nil limpia el renglón completo a la derecha
+                    "nil":        {"tecla": "n", "pulsaciones": 0},
                     "text":       {"tecla": "t", "pulsaciones": 1},
                     "integer":    {"tecla": "i", "pulsaciones": 1},
                     "real":       {"tecla": "r", "pulsaciones": 1},
@@ -96,12 +98,11 @@ MAPA_UI = {
                 }
             },
             
-            # --- FORMATOS DEL BOTÓN MORE ---
             "formatos_more": {
                 "formato_1": ["text", "integer", "real", "letter", "auto", "boolean", "fixed_data", "alphameric"],
                 "formato_2": ["lookup", "counter"],
                 "formato_3": ["date", "time"],
-                "bloqueado": ["prompt", "passdown", "extension", "pause"] # No abren botón
+                "bloqueado": ["prompt", "passdown", "extension", "pause"]
             }
         },
         
@@ -122,7 +123,7 @@ MAPA_UI = {
         "properties": {
             "esc": {
                 "coords": (620, 625),
-                "comportamiento": "dropdown_teclado", # Soporta flechas y letras (F = Form 1, M = Menu 1)
+                "comportamiento": "dropdown_teclado",
                 "orden": ["Main", "Form 1", "...", "Form 10", "Menu 1", "...", "Menu 10"]
             },
             "next": {
@@ -131,7 +132,7 @@ MAPA_UI = {
             },
             "record": {
                 "coords": (620, 280),
-                "atajo": "p", # 'P' selecciona Pass down
+                "atajo": "p",
                 "save": (620, 300)
             }
         }

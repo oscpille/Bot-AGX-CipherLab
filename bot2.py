@@ -16,7 +16,7 @@ def limpiar_texto(texto):
 
 def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volumen=False):
     """
-    Inyecta datos con posicionamiento inteligente y filtros de tipo.
+    Inyecta datos respetando las Zonas Seguras de la plantilla AGX y omitiendo duplicados.
     """
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     filas_y = MAPA_UI["vista_form"]["tabla"]["filas_y"]
@@ -24,30 +24,48 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volu
     indice_fila_captura = 1 
     filas_usadas = [] 
     
-    # Pre-calcular si tenemos ambos datos para la regla de espaciado en Form 3/6
     tiene_ambos_ubicaciones = any("marbete" in k for k in diccionario_datos) and any("ubicacion" in k for k in diccionario_datos)
     
+    # --- DETERMINAR LÍMITES Y ZONAS SEGURAS ---
+    if es_ubicacion:
+        limite_indice = 7 # Limpia hasta Fila 7 (índice 6). Protege Fila 8.
+    elif es_flujo_volumen:
+        limite_indice = 6 # (Form 7) Limpia hasta Fila 6. PROTEGE FILA 7 (Cantidad) y 8.
+    else:
+        limite_indice = 5 # (Form 4) Limpia hasta Fila 5. PROTEGE FILA 6 (Pause), 7 (Fixed) y 8.
+        
     # --- A. INYECTAR DATOS ---
     for nombre_logico, config in diccionario_datos.items():
         
         # --- LÓGICA ESPACIAL (Ubicaciones) ---
         if es_ubicacion:
             if "marbete" in nombre_logico:
-                idx = 2 # Siempre Fila 3
+                idx = 2 
             elif "ubicacion" in nombre_logico:
-                idx = 4 if tiene_ambos_ubicaciones else 2 # Fila 5 si hay ambos, Fila 3 si va solo
+                idx = 4 if tiene_ambos_ubicaciones else 2 
             else:
-                idx = 5 # Por si las dudas
+                idx = 5 
         
-        # --- LÓGICA DE CAPTURA NORMAL Y FILTRO DECIMALES ---
+        # --- LÓGICA DE CAPTURA NORMAL Y FILTROS ---
         else:
-            if es_flujo_volumen and config['tipo'] == 'real':
-                print(f"   [!] Omitiendo '{config['nombre_pantalla']}' (Decimal) porque estamos en Volumen.")
-                continue # Salta este dato
+            if es_flujo_volumen:
+                # Filtro 1: Omitir decimales en Volumen
+                if config['tipo'] == 'real':
+                    print(f"   [!] Omitiendo '{config['nombre_pantalla']}' (Decimal) porque estamos en Volumen.")
+                    continue 
+                
+                # Filtro 2: Omitir Cantidad en Volumen (Ya está fija en la fila 7)
+                if "cantidad" in nombre_logico:
+                    print(f"   [!] Omitiendo '{config['nombre_pantalla']}' porque ya viene por defecto en el Form 7.")
+                    continue
                 
             idx = indice_fila_captura
             indice_fila_captura += 1
-            if idx >= 7: break 
+            
+            # Detener inyección si superamos el espacio disponible
+            if idx >= limite_indice: 
+                print(f"   [!] Alerta: Se ignoraron campos extra porque se alcanzó el límite de esta pantalla.")
+                break 
             
         y_actual = filas_y[idx]
         filas_usadas.append(idx)
@@ -70,7 +88,7 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volu
         pyautogui.press('enter')
         time.sleep(0.1)
 
-        # 2. Escribir Prompt (Filtro de acentos y adición de ": ")
+        # 2. Escribir Prompt
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.1)
         
@@ -96,7 +114,8 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volu
         pyautogui.write(max_val.strip(), interval=0.05)
         
     # --- B. LIMPIEZA CON NIL ---
-    for i in range(1, 7):
+    # La barredora ahora solo llega hasta el límite permitido, protegiendo lo de abajo
+    for i in range(1, limite_indice):
         if i not in filas_usadas:
             y_actual = filas_y[i]
             pyautogui.click(columnas["data_type"], y_actual)
@@ -209,7 +228,7 @@ except Exception as e:
     sys.exit()
 
 # =========================================================
-# 3. EL CEREBRO DEL BOT (FASE 3)
+# 3. EL CEREBRO DEL BOT (FASE 3 - NUEVA ARQUITECTURA DE MENÚS)
 # =========================================================
 print("🤖 Iniciando Bot en 5 segundos...")
 print("⚠️ Activa Forge AG y suelta el ratón.")
@@ -227,18 +246,26 @@ try:
     pyautogui.scroll(1500)
     time.sleep(0.25) 
 
-    # --- B. MODIFICAR FORM 1 (TEXTWRAP Y LÓGICA DE PAUSA EN FILAS 6, 7, 8) ---
-    print("\n➤ Modificando Form 1 (Cabecera)...")
-    x_f1, y_f1 = MAPA_UI["vista_form"]["seleccion_forms"]["form_1"]
-    pyautogui.click(x_f1, y_f1) 
+    # --- B. MODIFICAR MENU 1 (NOMBRE DEL CLIENTE EN FILAS 5, 6, 7) ---
+    print("\n➤ Modificando Menu 1 (Cabecera del Cliente)...")
+    pyautogui.click(MAPA_UI["vista_menu"]["menu_1"])
     time.sleep(0.75) 
     
-    columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
-    filas_y = MAPA_UI["vista_form"]["tabla"]["filas_y"]
+    # Extraemos el diccionario completo de las Nexts para tener 'coords' y 'menu_2'
+    coords_items = [
+        MAPA_UI["vista_menu"]["items"]["item_5"]["coords"],
+        MAPA_UI["vista_menu"]["items"]["item_6"]["coords"],
+        MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]
+    ]
+    dicc_nexts = [
+        MAPA_UI["vista_menu"]["next_dropdowns"]["next_5"],
+        MAPA_UI["vista_menu"]["next_dropdowns"]["next_6"],
+        MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]
+    ]
     
-    # 1. Limpiar visualmente cualquier texto anterior en filas 6, 7 y 8
-    for i in range(5, 8): 
-        pyautogui.click(columnas["prompt"], filas_y[i])
+    # 1. Limpiar visualmente cualquier texto anterior en las filas 5, 6 y 7
+    for coord in coords_items: 
+        pyautogui.click(coord)
         time.sleep(0.1)
         pyautogui.press('delete')
         
@@ -246,42 +273,25 @@ try:
     lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
     
     for i in range(3): 
-        y_actual = filas_y[5 + i] 
-        
-        # Activar celda
-        pyautogui.click(columnas["data_type"], y_actual)
-        time.sleep(0.1)
-        pyautogui.click(columnas["data_type"], y_actual)
-        time.sleep(0.2) # Pausa un poco mayor para asegurar que abra
-        pyautogui.press('n') # Reset a Nil
-        time.sleep(0.1)
-        
         if i < len(lineas_cliente):
-            # Si es la última línea del texto, forzamos Pause (3 veces 'P' con pausa)
-            if i == len(lineas_cliente) - 1:
-                for _ in range(3):
-                    pyautogui.press('p')
-                    time.sleep(0.15) # Tiempo humano para que renderice cada salto
-            else:
-                # Si no es la última, es un Prompt normal (1 vez 'P')
-                pyautogui.press('p')
-                time.sleep(0.15)
-                
-            pyautogui.press('enter')
-            time.sleep(0.1)
-            
-            pyautogui.click(columnas["prompt"], y_actual)
+            # Escribir el fragmento de texto
+            pyautogui.click(coords_items[i])
             time.sleep(0.1)
             pyautogui.write(lineas_cliente[i], interval=0.05)
             
-        else:
-            # Si no hay texto, se queda en Nil
-            pyautogui.press('enter')
+            # Cambiar la columna "Next" a Menu 2 usando CLICS FÍSICOS
+            pyautogui.click(dicc_nexts[i]["coords"]) 
+            time.sleep(0.1)
+            pyautogui.click(dicc_nexts[i]["coords"]) # Doble clic para desplegar
+            time.sleep(0.25)
+            
+            # Clic directo en la opción "Menu 2" del menú desplegable
+            pyautogui.click(dicc_nexts[i]["menu_2"])
             time.sleep(0.1)
 
-    # --- C. MODIFICAR MENU 1 (MODO TURBO CON DOBLE CLIC) ---
-    print("\n➤ Configurando Menu 1...")
-    pyautogui.click(MAPA_UI["vista_menu"]["menu_1"])
+    # --- C. MODIFICAR MENU 2 (ENRUTADOR PIEZA O VOLUMEN) ---
+    print("\n➤ Configurando Menu 2 (Tipos de Conteo)...")
+    pyautogui.click(MAPA_UI["vista_menu"]["menu_2"]) # Extraído del diccionario
     time.sleep(0.75) 
 
     coords_item1 = MAPA_UI["vista_menu"]["items"]["item_1"]["coords"]
@@ -292,12 +302,28 @@ try:
         time.sleep(0.1)
         pyautogui.write("1. VOLUMEN", interval=0.05)
         
-        # Doble clic para asegurar que el dropdown abra
-        pyautogui.click(1000, 230) 
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
         time.sleep(0.1)
-        pyautogui.click(1000, 230) 
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
         time.sleep(0.25)           
         pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_5"])
+        time.sleep(0.1)
+        
+        pyautogui.click(coords_item2)
+        time.sleep(0.1)
+        pyautogui.press('delete')
+        pyautogui.press('enter')
+
+    elif es_pieza and not es_volumen:
+        pyautogui.click(coords_item1)
+        time.sleep(0.1)
+        pyautogui.write("1. PIEZA X PIEZA", interval=0.05)
+        
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
+        time.sleep(0.1)
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
+        time.sleep(0.25)           
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_2"])
         time.sleep(0.1)
         
         pyautogui.click(coords_item2)
@@ -347,7 +373,12 @@ try:
         print("➤ [VOLUMEN] Inyectando Variables en Form 7...")
         x_f7, y_f7 = MAPA_UI["vista_form"]["seleccion_forms"]["form_7"]["coords"]
         pyautogui.click(x_f7, y_f7)
-        time.sleep(0.75) 
+        time.sleep(0.5) 
+        
+        # EL SCROLL FALTANTE PARA MANTENER LA INTERFAZ EN SU LUGAR
+        pyautogui.scroll(1500) 
+        time.sleep(0.25)
+        
         inyectar_datos_en_tabla(dict_captura, es_ubicacion=False, es_flujo_volumen=True)
 
     print("\n✅ ¡ARCHIVO AGX GENERADO Y LIMPIO!")
