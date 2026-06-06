@@ -13,20 +13,28 @@ def limpiar_texto(texto):
     return texto_sin_acentos.lower().strip()
 
 def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
+    """
+    Inyecta datos con posicionamiento inteligente.
+    - Si es_ubicacion=True: Pone Marbete o Ubicación en Fila 3.
+    - Si es_ubicacion=False: Pone las variables de captura desde la Fila 2 hacia abajo.
+    - Limpia con 'Nil' cualquier fila sobrante.
+    """
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     filas_y = MAPA_UI["vista_form"]["tabla"]["filas_y"]
     
     indice_fila_captura = 1 
     filas_usadas = [] 
     
+    # --- A. INYECTAR DATOS ---
     for nombre_logico, config in diccionario_datos.items():
+        
+        # --- LÓGICA ESPACIAL (Centrado de Marbete y Ubicación) ---
         if es_ubicacion:
-            if "marbete" in nombre_logico:
-                idx = 2 
-            elif "ubicacion" in nombre_logico:
-                idx = 1 
+            if "marbete" in nombre_logico or "ubicacion" in nombre_logico:
+                idx = 2 # Ambos caen en la Fila 3
             else:
-                idx = 3 
+                idx = 3 # Por si acaso hay más, se van a la Fila 4
+        
         else:
             idx = indice_fila_captura
             indice_fila_captura += 1
@@ -36,6 +44,7 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         filas_usadas.append(idx)
         print(f"   -> Inyectando '{config['nombre_pantalla']}' en fila {idx + 1}")
         
+        # 1. Seleccionar Data Type
         pyautogui.click(columnas["data_type"], y_actual)
         time.sleep(0.2)
         pyautogui.click(columnas["data_type"], y_actual)
@@ -52,10 +61,23 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         pyautogui.press('enter')
         time.sleep(0.1)
 
+        # 2. Escribir Prompt (NUEVO: Filtro de acentos y adición de ": ")
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.1)
-        pyautogui.write(config['nombre_pantalla'], interval=0.05)
+        
+        # Le quitamos el acento para evitar el bug del teclado, pero conservamos mayúsculas
+        texto_pantalla = unicodedata.normalize('NFD', config['nombre_pantalla']).encode('ascii', 'ignore').decode('utf-8').strip()
+        
+        # Si la palabra ya traía ":" en el Excel, se lo quitamos temporalmente para no duplicarlo
+        if texto_pantalla.endswith(':'):
+            texto_pantalla = texto_pantalla[:-1]
+            
+        # Armamos el texto final con su espacio
+        texto_final = f"{texto_pantalla}: "
+        
+        pyautogui.write(texto_final, interval=0.05)
 
+        # 3. Separar y escribir Longitudes
         if '-' in config['longitud']:
             min_val, max_val = config['longitud'].split('-')
         else:
@@ -69,6 +91,7 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         time.sleep(0.1)
         pyautogui.write(max_val.strip(), interval=0.05)
         
+    # --- B. LIMPIEZA CON NIL ---
     for i in range(1, 7):
         if i not in filas_usadas:
             y_actual = filas_y[i]
@@ -94,7 +117,7 @@ TRADUCCION_TIPOS = {
     "alfanumerico": "alphameric",
     "texto": "text",
     "letras": "letter",
-    "ddmmaa": "alphameric" # <- NUEVO: Convertimos las fechas a alfanumérico para soportar ceros a la izquierda
+    "ddmmaa": "integer" # <-- ¡Modificado! Ahora forzará al bot a usar la "I" de Integer
 }
 
 try:
@@ -200,7 +223,7 @@ try:
     # --- C. MODIFICAR MENU 1 ---
     print("\n➤ Configurando Menu 1...")
     pyautogui.click(MAPA_UI["vista_menu"]["menu_1"])
-    time.sleep(0.75) # Antes 1.5
+    time.sleep(0.75) 
 
     coords_item1 = MAPA_UI["vista_menu"]["items"]["item_1"]["coords"]
     coords_item2 = MAPA_UI["vista_menu"]["items"]["item_2"]["coords"]
@@ -210,10 +233,15 @@ try:
         time.sleep(0.1)
         pyautogui.write("1. VOLUMEN", interval=0.05)
         
-        pyautogui.click(1000, 230)
-        time.sleep(0.25) # Antes 0.5
+        # Doble clic para abrir el desplegable (Modo Turbo)
+        pyautogui.click(1000, 230) # Clic 1: Selecciona
+        time.sleep(0.1)
+        pyautogui.click(1000, 230) # Clic 2: Despliega
+        time.sleep(0.25)           # Tiempo Turbo restaurado
         pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_5"])
+        time.sleep(0.1)
         
+        # Eliminar Item 2
         pyautogui.click(coords_item2)
         time.sleep(0.1)
         pyautogui.press('delete')
@@ -224,10 +252,15 @@ try:
         time.sleep(0.1)
         pyautogui.write("1. PIEZA X PIEZA", interval=0.05)
         
-        pyautogui.click(1000, 230)
-        time.sleep(0.25) # Antes 0.5
+        # Doble clic para abrir el desplegable (Modo Turbo)
+        pyautogui.click(1000, 230) # Clic 1: Selecciona
+        time.sleep(0.1)
+        pyautogui.click(1000, 230) # Clic 2: Despliega
+        time.sleep(0.25)           # Tiempo Turbo restaurado
         pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_2"])
+        time.sleep(0.1)
         
+        # Eliminar Item 2 
         pyautogui.click(coords_item2)
         time.sleep(0.1)
         pyautogui.press('delete')
