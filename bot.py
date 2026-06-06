@@ -9,46 +9,33 @@ from mapeo_batch import MAPA_UI
 # 1. FUNCIONES AUXILIARES Y DE INYECCIÓN
 # =========================================================
 def limpiar_texto(texto):
-    """Quita acentos y pasa a minúsculas para comparaciones exactas."""
     texto_sin_acentos = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     return texto_sin_acentos.lower().strip()
 
 def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
-    """
-    Inyecta datos con posicionamiento inteligente.
-    - Si es_ubicacion=True: Pone Marbete en Fila 3 y Ubicacion en Fila 2.
-    - Si es_ubicacion=False: Pone las variables de captura desde la Fila 2 hacia abajo.
-    - Limpia con 'Nil' cualquier fila sobrante.
-    """
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     filas_y = MAPA_UI["vista_form"]["tabla"]["filas_y"]
     
-    indice_fila_captura = 1 # Empezamos en Fila 2 (índice 1) para variables
+    indice_fila_captura = 1 
     filas_usadas = [] 
     
-    # --- A. INYECTAR DATOS ---
     for nombre_logico, config in diccionario_datos.items():
-        
-        # Lógica Espacial para el Form de Ubicaciones (3 o 6)
         if es_ubicacion:
             if "marbete" in nombre_logico:
-                idx = 2 # Forzar salto a Fila 3
+                idx = 2 
             elif "ubicacion" in nombre_logico:
-                idx = 1 # Forzar a Fila 2
+                idx = 1 
             else:
-                idx = 3 # Por si acaso hay más, lo manda a la Fila 4
-        
-        # Lógica Espacial para el Form de Captura (4 o 7)
+                idx = 3 
         else:
             idx = indice_fila_captura
             indice_fila_captura += 1
-            if idx >= 7: break # Proteger Fila 8 (CONTEO X)
+            if idx >= 7: break 
             
         y_actual = filas_y[idx]
         filas_usadas.append(idx)
         print(f"   -> Inyectando '{config['nombre_pantalla']}' en fila {idx + 1}")
         
-        # 1. Seleccionar Data Type (2 Clics pausados)
         pyautogui.click(columnas["data_type"], y_actual)
         time.sleep(0.2)
         pyautogui.click(columnas["data_type"], y_actual)
@@ -57,7 +44,7 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         tipo_interno = config['tipo']
         if tipo_interno in MAPA_UI["vista_form"]["tabla"]["logica_data_type"]["secuencias"]:
             info_tecla = MAPA_UI["vista_form"]["tabla"]["logica_data_type"]["secuencias"][tipo_interno]
-            pyautogui.press('n') # Truco para resetear a Nil
+            pyautogui.press('n') 
             time.sleep(0.1)
             for _ in range(info_tecla["pulsaciones"]):
                 pyautogui.press(info_tecla["tecla"])
@@ -65,12 +52,10 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         pyautogui.press('enter')
         time.sleep(0.1)
 
-        # 2. Escribir Prompt (1 Clic, escribe directo sin Supr)
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.1)
         pyautogui.write(config['nombre_pantalla'], interval=0.05)
 
-        # 3. Separar y escribir Longitudes (1 Clic, escribe directo)
         if '-' in config['longitud']:
             min_val, max_val = config['longitud'].split('-')
         else:
@@ -84,16 +69,14 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False):
         time.sleep(0.1)
         pyautogui.write(max_val.strip(), interval=0.05)
         
-    # --- B. LIMPIEZA CON NIL ---
-    # Revisamos de la Fila 2 a la 7. Si no la usamos, la matamos con Nil.
     for i in range(1, 7):
         if i not in filas_usadas:
             y_actual = filas_y[i]
             pyautogui.click(columnas["data_type"], y_actual)
             time.sleep(0.1)
-            pyautogui.click(columnas["data_type"], y_actual) # 2 clics para abrir
+            pyautogui.click(columnas["data_type"], y_actual) 
             time.sleep(0.1)
-            pyautogui.press('n') # Nil limpia todo el renglón
+            pyautogui.press('n') 
             pyautogui.press('enter')
 
 # =========================================================
@@ -110,22 +93,44 @@ TRADUCCION_TIPOS = {
     "alfamum": "alphameric",
     "alfanumerico": "alphameric",
     "texto": "text",
-    "letras": "letter"
+    "letras": "letter",
+    "ddmmaa": "alphameric" # <- NUEVO: Convertimos las fechas a alfanumérico para soportar ceros a la izquierda
 }
 
 try:
     print("➤ Iniciando lectura desde OneDrive...")
-    df = pd.read_excel(ruta_excel, usecols="F:K", engine='openpyxl')
+    
+    # --- BUCLE DE PACIENCIA (ANTI-RETRASO DE ONEDRIVE) ---
+    max_reintentos = 3
+    df_valido = False
+    
+    for intento in range(max_reintentos):
+        df = pd.read_excel(ruta_excel, usecols="F:K", engine='openpyxl')
+        df = df.dropna(how='all') 
+        
+        if not df.empty:
+            df_valido = True
+            break 
+            
+        print(f"   ⏳ OneDrive aún no actualiza. Esperando 5 segundos (Intento {intento + 1})...")
+        time.sleep(5) 
+        
+    if not df_valido:
+        raise ValueError("El Excel sigue vacío. Revisa OneDrive.")
+
     df.iloc[-1:].to_csv(ruta_csv, index=False, encoding='utf-8-sig')
 
     df_csv = pd.read_csv(ruta_csv, encoding='utf-8-sig')
     solicitud = df_csv.iloc[0]
     
     cliente = str(solicitud['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']).strip()
-    flujo_crudo = str(solicitud['FLUJO OPERATIVO:']).strip().upper()
     
-    es_pieza = "PIEZA" in flujo_crudo or "AMBOS" in flujo_crudo
-    es_volumen = "VOLUMEN" in flujo_crudo or "AMBOS" in flujo_crudo
+    # --- CORRECCIÓN ANTI-ACENTOS Y MAYÚSCULAS ---
+    # Usamos tu función limpiar_texto para que "Volúmen" o "VOLÚMEN" siempre sean "volumen"
+    flujo_crudo = limpiar_texto(solicitud['FLUJO OPERATIVO:'])
+    
+    es_pieza = "pieza" in flujo_crudo or "ambos" in flujo_crudo
+    es_volumen = "volumen" in flujo_crudo or "ambos" in flujo_crudo
     
     print(f"📦 Cliente: {cliente}")
     print(f"🔄 Flujo: Pieza={es_pieza} | Volumen={es_volumen}\n")
@@ -143,8 +148,6 @@ try:
             reglas = partes[1].replace(" - ", "-").replace("- ", "-").replace(" -", "-").strip().split()
             if len(reglas) >= 2:
                 tipo_excel = limpiar_texto(reglas[1])
-                
-                # Traducir el tipo. Si no está en el diccionario, usa el original.
                 tipo_forge = TRADUCCION_TIPOS.get(tipo_excel, tipo_excel)
                 
                 datos = {
@@ -153,7 +156,6 @@ try:
                     'tipo': tipo_forge
                 }
                 
-                # Ruteo al diccionario correcto
                 if "marbete" in nombre_logico or "ubicacion" in nombre_logico:
                     dict_ubicacion[nombre_logico] = datos
                 else:
@@ -164,33 +166,33 @@ except Exception as e:
     sys.exit()
 
 # =========================================================
-# 3. EL CEREBRO DEL BOT (FASE 3)
+# 3. EL CEREBRO DEL BOT (FASE 3) - MODO TURBO
 # =========================================================
 print("🤖 Iniciando Bot en 5 segundos...")
 print("⚠️ Activa Forge AG y suelta el ratón.")
 time.sleep(5) 
 
 try:
-    # --- A. PREPARAR EL TERRENO (DESPLEGAR ÁRBOL) ---
+    # --- A. PREPARAR EL TERRENO ---
     print("➤ [PASO 0] Desplegando árbol de directorios...")
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"])
-    time.sleep(0.5)
+    time.sleep(0.25) # Antes 0.5
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"])
-    time.sleep(0.5)
+    time.sleep(0.25) # Antes 0.5
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]["coords"])
-    time.sleep(1) 
+    time.sleep(0.5)  # Antes 1
     
     pyautogui.scroll(1500)
-    time.sleep(0.5)
+    time.sleep(0.25) # Antes 0.5
 
     # --- B. MODIFICAR FORM 1 ---
     print("\n➤ Modificando Form 1 (Cabecera)...")
     x_f1, y_f1 = MAPA_UI["vista_form"]["seleccion_forms"]["form_1"]
-    pyautogui.click(x_f1, y_f1) # Clic en la coordenada del diccionario
-    time.sleep(1.5) 
+    pyautogui.click(x_f1, y_f1) 
+    time.sleep(0.75) # Antes 1.5
     
-    pyautogui.click(650, 550) # Celda Nombre
-    time.sleep(0.2)
+    pyautogui.click(650, 550) 
+    time.sleep(0.1)  # Antes 0.2
     pyautogui.press('delete')
     pyautogui.write(cliente, interval=0.05) 
     pyautogui.press('enter')
@@ -198,68 +200,64 @@ try:
     # --- C. MODIFICAR MENU 1 ---
     print("\n➤ Configurando Menu 1...")
     pyautogui.click(MAPA_UI["vista_menu"]["menu_1"])
-    time.sleep(1.5)
+    time.sleep(0.75) # Antes 1.5
 
     coords_item1 = MAPA_UI["vista_menu"]["items"]["item_1"]["coords"]
     coords_item2 = MAPA_UI["vista_menu"]["items"]["item_2"]["coords"]
     
     if es_volumen and not es_pieza:
         pyautogui.click(coords_item1)
-        time.sleep(0.2)
+        time.sleep(0.1)
         pyautogui.write("1. VOLUMEN", interval=0.05)
         
         pyautogui.click(1000, 230)
-        time.sleep(0.5)
+        time.sleep(0.25) # Antes 0.5
         pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_5"])
         
-        # Eliminar Item 2
         pyautogui.click(coords_item2)
-        time.sleep(0.2)
+        time.sleep(0.1)
         pyautogui.press('delete')
         pyautogui.press('enter')
 
     elif es_pieza and not es_volumen:
         pyautogui.click(coords_item1)
-        time.sleep(0.2)
+        time.sleep(0.1)
         pyautogui.write("1. PIEZA X PIEZA", interval=0.05)
         
         pyautogui.click(1000, 230)
-        time.sleep(0.5)
+        time.sleep(0.25) # Antes 0.5
         pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_2"])
         
-        # Eliminar Item 2 
         pyautogui.click(coords_item2)
-        time.sleep(0.2)
+        time.sleep(0.1)
         pyautogui.press('delete')
         pyautogui.press('enter')
 
     # --- D. INYECCIÓN EN FORMS ---
     pyautogui.scroll(1500) 
-    time.sleep(1)
+    time.sleep(0.5) # Antes 1
 
-    # RUTA PIEZA X PIEZA
     if es_pieza:
         print("\n➤ [PIEZA] Inyectando Ubicaciones en Form 3...")
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_3"])
-        time.sleep(1.5)
+        time.sleep(0.75) # Antes 1.5
         inyectar_datos_en_tabla(dict_ubicacion, es_ubicacion=True)
         
         print("➤ [PIEZA] Inyectando Variables en Form 4...")
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_4"])
-        time.sleep(1.5)
+        time.sleep(0.75) # Antes 1.5
         inyectar_datos_en_tabla(dict_captura, es_ubicacion=False)
 
-    # RUTA VOLUMEN
     if es_volumen:
         print("\n➤ [VOLUMEN] Inyectando Ubicaciones en Form 6...")
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_6"])
-        time.sleep(1.5)
+        time.sleep(0.75) # Antes 1.5
         inyectar_datos_en_tabla(dict_ubicacion, es_ubicacion=True)
         
         print("➤ [VOLUMEN] Inyectando Variables en Form 7...")
         x_f7, y_f7 = MAPA_UI["vista_form"]["seleccion_forms"]["form_7"]["coords"]
         pyautogui.click(x_f7, y_f7)
-        time.sleep(1.5)
+        time.sleep(0.75) # Antes 1.5
         inyectar_datos_en_tabla(dict_captura, es_ubicacion=False)
 
     print("\n✅ ¡ARCHIVO AGX GENERADO Y LIMPIO!")
