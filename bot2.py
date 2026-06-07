@@ -325,19 +325,17 @@ try:
         MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]
     ]
     
-    for coord in coords_items: 
-        pyautogui.click(coord)
-        time.sleep(0.1)
-        pyautogui.press('delete')
-        
+    # Cortar el nombre e inyectarlo renglón por renglón
     lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
     
     for i in range(3): 
         if i < len(lineas_cliente):
+            # 1. Escribir el texto (Sin borrar y sin dar Enter)
             pyautogui.click(coords_items[i])
             time.sleep(0.1)
             pyautogui.write(lineas_cliente[i], interval=0.05)
             
+            # 2. Configurar la columna Next (INTACTA)
             pyautogui.click(dicc_nexts[i]["coords"]) 
             time.sleep(0.1)
             pyautogui.click(dicc_nexts[i]["coords"]) 
@@ -387,6 +385,23 @@ try:
         pyautogui.press('delete')
         pyautogui.press('enter')
 
+    elif es_pieza and not es_volumen:
+        pyautogui.click(coords_item1)
+        time.sleep(0.1)
+        pyautogui.write("1. PIEZA X PIEZA", interval=0.05)
+        
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
+        time.sleep(0.1)
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["coords"]) 
+        time.sleep(0.25)           
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_1"]["form_2"])
+        time.sleep(0.1)
+        
+        pyautogui.click(coords_item2)
+        time.sleep(0.1)
+        pyautogui.press('delete')
+        pyautogui.press('enter')
+
     # --- B. COLAPSAR MENÚS Y ABRIR LOOKUPS ---
     print("\n➤ [PASO 2] Colapsando Menu para liberar espacio...")
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"])
@@ -404,12 +419,10 @@ try:
     
     pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
     time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
     pyautogui.write('10', interval=0.05)
     
     pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"])
     time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
     pyautogui.write('10', interval=0.05)
     
     # 2nd Lookup File
@@ -418,7 +431,6 @@ try:
     
     pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
     time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
     pyautogui.write(str(multiplo_sku), interval=0.05)
 
     # --- C. ABRIR FORMS E INYECTAR DATOS ---
