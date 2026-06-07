@@ -1,6 +1,6 @@
-# ==========================================
-# MAPA DE INTERFAZ FORGE AG (DELL LATITUDE)
-# ==========================================
+# =========================================================
+# MAPA DE INTERFAZ FORGE AG (DELL LATITUDE) - V5.0 OPTIMIZADO
+# =========================================================
 
 MAPA_UI = {
     "barra_superior": {
@@ -11,36 +11,34 @@ MAPA_UI = {
     
     "directorio_izquierdo": {
         "menu": (300, 245),
-        "lookup": (300, 430),
-        "form": {
-            "coords": (300, 500),
-            "comportamiento": "hacer_scroll_arriba" 
-        }
+        "lookup": (300, 260),  # NUEVA COORDENADA (COLAPSADO)
+        "form": (300, 328)     # NUEVA COORDENADA (COLAPSADO)
     },
     
     "vista_menu": {
         "menu_1": (370, 260),
-        "menu_2": (365, 276), # <-- NUEVO
+        "menu_2": (365, 276),
         "items": {
             "item_1": {"coords": (850, 230), "accion": "1_click_copiar_borrar"},
             "item_2": {"coords": (850, 255), "accion": "1_click_copiar_borrar"},
-            "item_5": {"coords": (850, 315), "accion": "1_click_copiar_borrar"}, # <-- NUEVO
-            "item_6": {"coords": (850, 333), "accion": "1_click_copiar_borrar"}, # <-- NUEVO
-            "item_7": {"coords": (850, 350), "accion": "1_click_copiar_borrar"}  # <-- NUEVO
+            "item_5": {"coords": (850, 315), "accion": "1_click_copiar_borrar"},
+            "item_6": {"coords": (850, 333), "accion": "1_click_copiar_borrar"},
+            "item_7": {"coords": (850, 350), "accion": "1_click_copiar_borrar"}
         },
         "next_dropdowns": {
             "next_1": {"coords": (1000, 230), "form_2": (1000, 275), "form_5": (1000, 317)},
             "next_2": {"coords": (1000, 255), "form_2": (1000, 296), "form_5": (1000, 335)},
-            "next_5": {"coords": (1000, 315), "menu_2": (1000, 490)}, # <-- Clics físicos agregados
-            "next_6": {"coords": (1000, 333), "menu_2": (1000, 509)}, # <-- Clics físicos agregados
-            "next_7": {"coords": (1000, 350), "menu_2": (1000, 528)}  # <-- Clics físicos agregados
+            "next_5": {"coords": (1000, 315), "menu_2": (1000, 490)},
+            "next_6": {"coords": (1000, 333), "menu_2": (1000, 509)},
+            "next_7": {"coords": (1000, 350), "menu_2": (1000, 528)}
         }
     },
     
     "vista_lookup": {
         "archivos": {
-            "1st_lookup": (380, 450),
-            "2nd_lookup": (380, 465)
+            "1st_lookup": (380, 280),  # REESTRUCTURADO
+            "2nd_lookup": (380, 295),  # REESTRUCTURADO
+            "3rd_lookup": (380, 310)   # REESTRUCTURADO
         },
         "configuracion": {
             "number_of_fields": {"coords": (640, 220), "accion": "2_delete_para_borrar"},
@@ -56,13 +54,16 @@ MAPA_UI = {
     
     "vista_form": {
         "seleccion_forms": {
-            "form_1": (365, 515),
-            "form_2": (365, 530),
-            "form_3": (365, 550),
-            "form_4": (365, 565),
-            "form_5": (365, 585),
-            "form_6": (365, 600),
-            "form_7": {"coords": (365, 612), "comportamiento": "hacer_scroll_arriba"}
+            "form_1": (365, 345),   # REESTRUCTURADO UNIFORME
+            "form_2": (365, 362),
+            "form_3": (365, 380),
+            "form_4": (365, 397),
+            "form_5": (365, 415),
+            "form_6": (365, 431),
+            "form_7": (365, 448),   # REMOVIDA COMPLEJIDAD DE SCROLL
+            "form_8": (365, 462),
+            "form_9": (365, 480),
+            "form_10": (365, 500)
         },
         
         "tabla": {

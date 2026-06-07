@@ -15,6 +15,46 @@ def limpiar_texto(texto):
     texto_sin_acentos = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     return texto_sin_acentos.lower().strip()
 
+def configurar_1st_lookup(form_coords):
+    """
+    Entra a Form 2 o Form 5, activa el 1st Lookup y asigna Field 1 y Field 2.
+    """
+    pyautogui.click(form_coords)
+    time.sleep(0.75)
+    
+    # 1. Encender el Radio Button de 1st Lookup
+    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
+    time.sleep(0.2)
+    
+    col_field = MAPA_UI["vista_form"]["tabla"]["columnas_x"]["variables_field"]
+    filas_y = MAPA_UI["vista_form"]["tabla"]["filas_y"]
+    
+    # 2. Configurar Fila 2 (Contraseña) -> Field 1
+    pyautogui.click(col_field, filas_y[1])
+    time.sleep(0.1)
+    pyautogui.click(col_field, filas_y[1]) 
+    time.sleep(0.1)
+    pyautogui.press('n') 
+    time.sleep(0.1)
+    pyautogui.press('f') 
+    time.sleep(0.1)
+    pyautogui.press('enter')
+    time.sleep(0.1)
+    
+    # 3. Configurar Fila 3 (Operador) -> Field 2
+    pyautogui.click(col_field, filas_y[2])
+    time.sleep(0.1)
+    pyautogui.click(col_field, filas_y[2]) 
+    time.sleep(0.1)
+    pyautogui.press('n') 
+    time.sleep(0.1)
+    pyautogui.press('f') 
+    time.sleep(0.1)
+    pyautogui.press('f') 
+    time.sleep(0.1)
+    pyautogui.press('enter')
+    time.sleep(0.1)
+
 def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volumen=False):
     """
     Inyecta datos respetando las Zonas Seguras de la plantilla AGX,
@@ -30,11 +70,11 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volu
     
     # --- DETERMINAR LÍMITES Y ZONAS SEGURAS ---
     if es_ubicacion:
-        limite_indice = 7 # (Form 3/6) Limpia hasta Fila 7.
+        limite_indice = 7 
     elif es_flujo_volumen:
-        limite_indice = 6 # (Form 7) Limpia hasta Fila 6. PROTEGE FILA 7 (Cantidad) y 8.
+        limite_indice = 6 
     else:
-        limite_indice = 5 # (Form 4) Limpia hasta Fila 5. PROTEGE FILA 6 (Pause), 7 (Fixed) y 8.
+        limite_indice = 5 
         
     # --- A. INYECTAR DATOS ---
     for nombre_logico, config in diccionario_datos.items():
@@ -118,9 +158,9 @@ def inyectar_datos_en_tabla(diccionario_datos, es_ubicacion=False, es_flujo_volu
             time.sleep(0.1)
             pyautogui.click(columnas["variables_field"], y_actual)
             time.sleep(0.1)
-            pyautogui.press('n') # Resetea a Nil
+            pyautogui.press('n') 
             time.sleep(0.1)
-            pyautogui.press('f') # Selecciona Field 1
+            pyautogui.press('f') 
             time.sleep(0.1)
             pyautogui.press('enter')
             time.sleep(0.1)
@@ -258,52 +298,19 @@ except Exception as e:
     sys.exit()
 
 # =========================================================
-# 3. EL CEREBRO DEL BOT (FASE 3)
+# 3. EL CEREBRO DEL BOT (FASE 3 - EJECUCIÓN CRONOLÓGICA)
 # =========================================================
 print("🤖 Iniciando Bot en 5 segundos...")
 print("⚠️ Activa Forge AG y suelta el ratón.")
 time.sleep(5) 
 
 try:
-    print("➤ [PASO 0] Desplegando árbol de directorios...")
+    # --- A. ABRIR Y CONFIGURAR MENÚS ---
+    print("\n➤ [PASO 1] Desplegando directorio Menu...")
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"])
-    time.sleep(0.25) 
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"])
-    time.sleep(0.25) 
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]["coords"])
-    time.sleep(0.5)  
-    
-    pyautogui.scroll(1500)
-    time.sleep(0.25) 
+    time.sleep(0.5) 
 
-    # --- A. CONFIGURAR LOOKUP FILES ---
-    print("\n➤ Configurando Lookup Files (1st y 2nd)...")
-    
-    # 1st Lookup File
-    pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"])
-    time.sleep(0.75)
-    
-    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
-    time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
-    pyautogui.write('10', interval=0.05)
-    
-    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"])
-    time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
-    pyautogui.write('10', interval=0.05)
-    
-    # 2nd Lookup File
-    pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"])
-    time.sleep(0.75)
-    
-    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
-    time.sleep(0.1)
-    pyautogui.press('delete', presses=3)
-    pyautogui.write(str(multiplo_sku), interval=0.05)
-
-    # --- B. MODIFICAR MENU 1 ---
-    print("\n➤ Modificando Menu 1 (Cabecera del Cliente)...")
+    print("➤ Modificando Menu 1 (Cabecera del Cliente)...")
     pyautogui.click(MAPA_UI["vista_menu"]["menu_1"])
     time.sleep(0.75) 
     
@@ -339,8 +346,7 @@ try:
             pyautogui.click(dicc_nexts[i]["menu_2"])
             time.sleep(0.1)
 
-    # --- C. MODIFICAR MENU 2 ---
-    print("\n➤ Configurando Menu 2 (Tipos de Conteo)...")
+    print("➤ Configurando Menu 2 (Tipos de Conteo)...")
     pyautogui.click(MAPA_UI["vista_menu"]["menu_2"])
     time.sleep(0.75) 
 
@@ -381,12 +387,50 @@ try:
         pyautogui.press('delete')
         pyautogui.press('enter')
 
-    # --- D. INYECCIÓN EN FORMS ---
-    pyautogui.scroll(1500) 
-    time.sleep(0.5) 
+    # --- B. COLAPSAR MENÚS Y ABRIR LOOKUPS ---
+    print("\n➤ [PASO 2] Colapsando Menu para liberar espacio...")
+    pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"])
+    time.sleep(0.5)
+
+    print("➤ Desplegando directorio Lookup...")
+    pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"])
+    time.sleep(0.5)
+
+    print("➤ Configurando Lookup Files (1st y 2nd)...")
+    
+    # 1st Lookup File
+    pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"])
+    time.sleep(0.75)
+    
+    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
+    time.sleep(0.1)
+    pyautogui.press('delete', presses=3)
+    pyautogui.write('10', interval=0.05)
+    
+    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"])
+    time.sleep(0.1)
+    pyautogui.press('delete', presses=3)
+    pyautogui.write('10', interval=0.05)
+    
+    # 2nd Lookup File
+    pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"])
+    time.sleep(0.75)
+    
+    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"])
+    time.sleep(0.1)
+    pyautogui.press('delete', presses=3)
+    pyautogui.write(str(multiplo_sku), interval=0.05)
+
+    # --- C. ABRIR FORMS E INYECTAR DATOS ---
+    print("\n➤ [PASO 3] Desplegando directorio Form...")
+    pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"])
+    time.sleep(0.5)
 
     if es_pieza:
-        print("\n➤ [PIEZA] Inyectando Ubicaciones en Form 3...")
+        print("\n➤ [PIEZA] Configurando Operador y Contraseña en Form 2...")
+        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"]["form_2"])
+
+        print("➤ [PIEZA] Inyectando Ubicaciones en Form 3...")
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_3"])
         time.sleep(0.75) 
         inyectar_datos_en_tabla(dict_ubicacion, es_ubicacion=True, es_flujo_volumen=False)
@@ -401,25 +445,24 @@ try:
         inyectar_datos_en_tabla(dict_captura, es_ubicacion=False, es_flujo_volumen=False)
 
     if es_volumen:
-        print("\n➤ [VOLUMEN] Inyectando Ubicaciones en Form 6...")
+        print("\n➤ [VOLUMEN] Configurando Operador y Contraseña en Form 5...")
+        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"]["form_5"])
+
+        print("➤ [VOLUMEN] Inyectando Ubicaciones en Form 6...")
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_6"])
         time.sleep(0.75) 
         inyectar_datos_en_tabla(dict_ubicacion, es_ubicacion=True, es_flujo_volumen=True)
         
         print("➤ [VOLUMEN] Inyectando Variables en Form 7...")
-        x_f7, y_f7 = MAPA_UI["vista_form"]["seleccion_forms"]["form_7"]["coords"]
-        pyautogui.click(x_f7, y_f7)
+        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"]["form_7"])
         time.sleep(0.5) 
-        
-        pyautogui.scroll(1500) 
-        time.sleep(0.25)
         
         pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"])
         time.sleep(0.2)
         
         inyectar_datos_en_tabla(dict_captura, es_ubicacion=False, es_flujo_volumen=True)
 
-    print("\n✅ ¡ARCHIVO AGX GENERADO Y LIMPIO!")
+    print("\n✅ ¡ARCHIVO AGX GENERADO Y LIMPIO CON FLUJO TURBO CONTRACTIL!")
 
 except Exception as e:
     print(f"\n❌ El bot se detuvo por un error: {e}")
