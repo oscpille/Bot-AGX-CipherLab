@@ -1,7 +1,10 @@
 ﻿NOMBRE DE QUIEN SOLICITA EL AGX,INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:,FLUJO OPERATIVO:,MARBETE Y UBICACIÓN,¿QUÉ NIVEL DE PRIORIDAD DAREMOS?,DATOS REQUERIDOS
-Pedrito sola,Bodegas de la Alianza,Ambos,Ambos,c. Registrar ambos en la misma pantalla.,"Marbete : 2-5 num
-Ubicación: 11 alfamum
-Lote: 5-10 num
-Kilo: 3-7 decimal
-Metros: 3-7 decimal
-Caducidad; DDMMAAAA"
+Pancho Villa,Los guerreros de Cholula Jr. Remasterizados,Ambos,Ambos,a. Primero registrar Marbete y en la pantalla siguiente Ubicación.,"Marbete 5, numérico
+Ubicación de 11 a 19 alfanumerica
+SKU con 15 alfanumérico 
+Color mínimo 3, máximo 15
+Modelo 9 a 19,
+Talla: 2 texto
+Conjunto con 1.
+Proveedor 10-20
+Estado: 9-14."
