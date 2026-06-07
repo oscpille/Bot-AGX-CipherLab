@@ -123,18 +123,16 @@ MAPA_UI = {
         
         "properties": {
             "esc": {
-                "coords": (620, 625),
-                "comportamiento": "dropdown_teclado",
-                "orden": ["Main", "Form 1", "...", "Form 10", "Menu 1", "...", "Menu 10"]
+                "coords": (620, 222),
+                "comportamiento": "atajo_teclado_f_m"
             },
             "next": {
                 "coords": (620, 255),
-                "comportamiento": "dropdown_teclado"
+                "comportamiento": "atajo_teclado_f_m"
             },
             "record": {
                 "coords": (620, 280),
-                "atajo": "p",
-                "save": (620, 300)
+                "atajo": "p_s_x4"
             }
         }
     }
