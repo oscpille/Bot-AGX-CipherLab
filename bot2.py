@@ -12,11 +12,15 @@ from mapeo_batch import MAPA_UI
 # 1. FUNCIONES AUXILIARES Y DE INFRAESTRUCTURA RELACIONAL
 # =========================================================
 def limpiar_texto(texto):
-    """Quita acentos y pasa a minúsculas para comparaciones exactas."""
+    """Quita acentos y pasa a minúsculas para comparaciones exactas de lógica."""
     texto_sin_acentos = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     return texto_sin_acentos.lower().strip()
 
-def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", field_select=""):
+def quitar_acentos(texto):
+    """Filtro de seguridad para PyAutoGUI: Quita acentos pero respeta mayúsculas/minúsculas."""
+    return unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
+
+def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0):
     """Escribe de manera limpia y veloz un renglón de la tabla sin parpadeos."""
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
@@ -37,13 +41,13 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", fiel
     pyautogui.press('enter')
     time.sleep(0.05)
     
-    # 2. Escribir Prompt (Si aplica)
+    # 2. Escribir Prompt (Filtro Anti-Acentos)
     if prompt_text:
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.05)
-        pyautogui.write(prompt_text, interval=0.02)
+        pyautogui.write(quitar_acentos(prompt_text), interval=0.02)
         
-    # 3. Longitudes (Si aplica)
+    # 3. Longitudes
     if min_len:
         pyautogui.click(columnas["min_length"], y_actual)
         time.sleep(0.05)
@@ -53,15 +57,15 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", fiel
         time.sleep(0.05)
         pyautogui.write(max_len, interval=0.02)
         
-    # 4. Asignación de Llaves Referenciales de Campos (Field)
-    if field_select:
+    # 4. Asignación Matemática de Fields (1 o 2)
+    if num_fields > 0:
         pyautogui.click(columnas["variables_field"], y_actual)
         time.sleep(0.05)
         pyautogui.click(columnas["variables_field"], y_actual)
         time.sleep(0.05)
         pyautogui.press('n') # Resetea a Nil
         time.sleep(0.05)
-        for _ in range(field_select.lower().count('f')):
+        for _ in range(num_fields):
             pyautogui.press('f')
             time.sleep(0.03)
         pyautogui.press('enter')
@@ -75,12 +79,11 @@ def configurar_1st_lookup(form_coords):
     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
     time.sleep(0.2)
     
-    # Renglón 2 (Contrasena:) -> Field 1
-    escribir_celda(1, "integer", "Contrasena: ", "5", "5", "field_1")
-    # Renglón 3 (Operador:) -> Field 2
-    escribir_celda(2, "lookup", "Operador: ", "", "", "field_2")
+    # Renglón 2 (Contrasena:) -> Field 1 (Pasamos el número 1)
+    escribir_celda(1, "integer", "Contrasena: ", "5", "5", 1)
+    # Renglón 3 (Operador:) -> Field 2 (Pasamos el número 2)
+    escribir_celda(2, "lookup", "Operador: ", "", "", 2)
     
-    # Limpieza absoluta de las celdas restantes de la pantalla de login
     for i in range(3, 8):
         escribir_celda(i, "nil", "")
 
@@ -132,20 +135,32 @@ def configurar_propiedades_form(esc_id, next_id, record_tipo):
     time.sleep(0.1)
 
 def asignar_piscina_forms(es_pieza, es_volumen, dict_captura, dict_ubicacion, separar_ubicacion):
-    """Calcula matemáticamente y distribuye dinámicamente los 10 Forms de la piscina."""
+    """Calcula matemáticamente y distribuye dinámicamente los 10 Forms."""
     forms_disponibles = list(range(1, 11))
     rutas = {}
     total_vars = len(dict_captura)
     
+    def calcular_paginas_contractiles(t_vars):
+        """Calcula páginas: intermedias soportan 6, la última soporta 5."""
+        if t_vars == 0: return 1
+        paginas = 0
+        v_left = t_vars
+        while True:
+            paginas += 1
+            if v_left <= 5: break
+            v_left -= 6
+        return paginas
+    
     try:
+        paginas_necesarias = calcular_paginas_contractiles(total_vars)
+        
         if es_pieza:
             rutas['pieza'] = {
                 'login': forms_disponibles.pop(0),
                 'loc1': forms_disponibles.pop(0),
                 'loc2': forms_disponibles.pop(0) if (separar_ubicacion and len(dict_ubicacion) > 1) else None
             }
-            paginas = math.ceil(total_vars / 5) if total_vars > 0 else 1
-            rutas['pieza']['datos'] = [forms_disponibles.pop(0) for _ in range(paginas)]
+            rutas['pieza']['datos'] = [forms_disponibles.pop(0) for _ in range(paginas_necesarias)]
             
         if es_volumen:
             rutas['volumen'] = {
@@ -153,14 +168,7 @@ def asignar_piscina_forms(es_pieza, es_volumen, dict_captura, dict_ubicacion, se
                 'loc1': forms_disponibles.pop(0),
                 'loc2': forms_disponibles.pop(0) if (separar_ubicacion and len(dict_ubicacion) > 1) else None
             }
-            # Lógica contractil para Volumen: Páginas intermedias de 6, última página de hasta 5 variables
-            v_left = total_vars
-            paginas_v = 0
-            while v_left > 0:
-                paginas_v += 1
-                v_left = 0 if v_left <= 5 else v_left - 6
-            if paginas_v == 0: paginas_v = 1
-            rutas['volumen']['datos'] = [forms_disponibles.pop(0) for _ in range(paginas_v)]
+            rutas['volumen']['datos'] = [forms_disponibles.pop(0) for _ in range(paginas_necesarias)]
             
     except IndexError:
         print("\n❌ ERROR CRÍTICO: ¡La solicitud desborda la capacidad de 10 Forms de Forge AG!")
@@ -328,6 +336,15 @@ try:
     pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.4)
     listado_vars = list(dict_captura.values())
 
+    # Helper para extraer la data real de las ubicaciones
+    def get_loc_info(clave):
+        for k, v in dict_ubicacion.items():
+            if clave in k: return v
+        return {'tipo': 'alphameric', 'nombre_pantalla': clave.capitalize(), 'longitud': '1-20'}
+        
+    m_info = get_loc_info('marbete')
+    u_info = get_loc_info('ubicacion')
+
     # =========================================================
     # INYECCIÓN CONTINUA DE LA RAMA A: PIEZA X PIEZA
     # =========================================================
@@ -335,55 +352,67 @@ try:
         p_route = plan_vuelo['pieza']
         print(f"\n➤ Construyendo Flujo Procedural de Piezas (Inicia Form {p_route['login']})...")
         
-        # 1. Login Pieza
         configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"])
         configurar_propiedades_form("menu 2", p_route['loc1'], "pass_down")
         
-        # 2. Localizaciones (Evaluación de Separación Dinámica)
+        # Inyección de Localizaciones con Tipos Reales
         if p_route['loc2']:
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['loc1']}"]); time.sleep(0.5)
-            escribir_celda(2, "prompt", "Marbete: ")
+            escribir_celda(2, m_info['tipo'], f"{m_info['nombre_pantalla']}: ", m_info['longitud'].split('-')[0], m_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO X PIEZA")
             configurar_propiedades_form(p_route['login'], p_route['loc2'], "pass_down")
             
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['loc2']}"]); time.sleep(0.5)
-            escribir_celda(4, "prompt", "Ubicacion: ")
+            escribir_celda(4, u_info['tipo'], f"{u_info['nombre_pantalla']}: ", u_info['longitud'].split('-')[0], u_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO X PIEZA")
             configurar_propiedades_form(p_route['loc1'], p_route['datos'][0], "pass_down")
             esc_retorno_datos = p_route['loc2']
         else:
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['loc1']}"]); time.sleep(0.5)
-            escribir_celda(2, "prompt", "Marbete: ")
-            escribir_celda(4, "prompt", "Ubicacion: ")
+            escribir_celda(2, m_info['tipo'], f"{m_info['nombre_pantalla']}: ", m_info['longitud'].split('-')[0], m_info['longitud'].split('-')[1])
+            escribir_celda(4, u_info['tipo'], f"{u_info['nombre_pantalla']}: ", u_info['longitud'].split('-')[0], u_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO X PIEZA")
             configurar_propiedades_form(p_route['login'], p_route['datos'][0], "pass_down")
             esc_retorno_datos = p_route['loc1']
 
-        # 3. Datos Pieza Paginados (Bloques de 5 variables)
+        # Bucle Contráctil de Datos (Optimizado)
         total_pags_p = len(p_route['datos'])
+        p_idx_global = 0
+        
         for idx, f_num in enumerate(p_route['datos']):
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.5)
             pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
             
-            # Cabecera indicadora de página
+            es_ultima = (idx == total_pags_p - 1)
+            
+            # --- NUEVA REGLA: FECHA Y HORA AL FINAL DEL RECORD ---
+            if es_ultima:
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"])
+                time.sleep(0.1)
+
             escribir_celda(0, "prompt", f"CONTEO X PZ {idx+1}/{total_pags_p}")
             
-            # Extraer rebanada de 5 variables
-            rebanada = listado_vars[idx*5 : (idx+1)*5]
-            for r_idx, v_info in enumerate(rebanada):
-                escribir_celda(r_idx + 1, v_info['tipo'], v_info['nombre_pantalla'], v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], "field_1" if "sku" in limpiar_texto(v_info['nombre_pantalla']) else "")
-                
-            # Limpiar renglones intermedios sobrantes antes del pie de página
-            for v_blank in range(len(rebanada) + 1, 6):
-                escribir_celda(v_blank, "nil", "")
-                
-            # Configuración del Pie de Página de Navegación y Enrutamiento del Scan Loop
-            es_ultima = (idx == total_pags_p - 1)
-            escribir_celda(6, "pause", "[ENTER] O [ESC]" if es_ultima else "SIGUIENTE ")
-            escribir_celda(7, "fixed_data", "1")
+            capacidad = 5 if es_ultima else 6
+            rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
+            p_idx_global += len(rebanada)
             
+            for r_idx, v_info in enumerate(rebanada):
+                # Ahora pasamos enteros: 1 si es SKU, 0 si no lo es.
+                num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
+                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field)
+                
+            if es_ultima:
+                for v_blank in range(len(rebanada) + 1, 6):
+                    escribir_celda(v_blank, "nil", "")
+                escribir_celda(6, "pause", "[ENTER] O [ESC]")
+                escribir_celda(7, "fixed_data", "1")
+            else:
+                for v_blank in range(len(rebanada) + 1, 7):
+                    escribir_celda(v_blank, "nil", "")
+                escribir_celda(7, "pause", "SIGUIENTE ")
+                
             p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]
-            p_next = p_route['datos'][0] if es_ultima else p_route['datos'][idx + 1] # ¡AQUÍ SE CURA EL BUCLE CONTINUO!
+            p_next = p_route['datos'][0] if es_ultima else p_route['datos'][idx + 1] 
             p_record = "save" if es_ultima else "pass_down"
             configurar_propiedades_form(p_esc, p_next, p_record)
 
@@ -394,31 +423,28 @@ try:
         v_route = plan_vuelo['volumen']
         print(f"\n➤ Construyendo Flujo Procedural de Volumen (Inicia Form {v_route['login']})...")
         
-        # 1. Login Volumen
         configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"])
         configurar_propiedades_form("menu 2", v_route['loc1'], "pass_down")
         
-        # 2. Localizaciones Volumen
         if v_route['loc2']:
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['loc1']}"]); time.sleep(0.5)
-            escribir_celda(2, "prompt", "Marbete: ")
+            escribir_celda(2, m_info['tipo'], f"{m_info['nombre_pantalla']}: ", m_info['longitud'].split('-')[0], m_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO VOLUMEN")
             configurar_propiedades_form(v_route['login'], v_route['loc2'], "pass_down")
             
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['loc2']}"]); time.sleep(0.5)
-            escribir_celda(4, "prompt", "Ubicacion: ")
+            escribir_celda(4, u_info['tipo'], f"{u_info['nombre_pantalla']}: ", u_info['longitud'].split('-')[0], u_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO VOLUMEN")
             configurar_propiedades_form(v_route['loc1'], v_route['datos'][0], "pass_down")
             esc_retorno_datos_v = v_route['loc2']
         else:
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['loc1']}"]); time.sleep(0.5)
-            escribir_celda(2, "prompt", "Marbete: ")
-            escribir_celda(4, "prompt", "Ubicacion: ")
+            escribir_celda(2, m_info['tipo'], f"{m_info['nombre_pantalla']}: ", m_info['longitud'].split('-')[0], m_info['longitud'].split('-')[1])
+            escribir_celda(4, u_info['tipo'], f"{u_info['nombre_pantalla']}: ", u_info['longitud'].split('-')[0], u_info['longitud'].split('-')[1])
             escribir_celda(7, "prompt", "CONTEO VOLUMEN")
             configurar_propiedades_form(v_route['login'], v_route['datos'][0], "pass_down")
             esc_retorno_datos_v = v_route['loc1']
 
-        # 3. Datos Volumen Paginados (Lógica Contractil Automatizada)
         total_pags_v = len(v_route['datos'])
         v_idx_global = 0
         
@@ -427,17 +453,23 @@ try:
             pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
             
             es_ultima = (idx == total_pags_v - 1)
+            
+            # --- NUEVA REGLA: FECHA Y HORA AL FINAL DEL RECORD ---
+            if es_ultima:
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"])
+                time.sleep(0.1)
+
             escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
             
-            # Slicing dinámico dependiendo de la zona de la página
             capacidad = 5 if es_ultima else 6
             rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
             v_idx_global += len(rebanada)
             
             for r_idx, v_info in enumerate(rebanada):
-                escribir_celda(r_idx + 1, v_info['tipo'], v_info['nombre_pantalla'], v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], "field_1" if "sku" in limpiar_texto(v_info['nombre_pantalla']) else "")
+                # Ahora pasamos enteros: 1 si es SKU, 0 si no lo es.
+                num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
+                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field)
                 
-            # Limpieza y estructuración del pie flotante de volumen
             if es_ultima:
                 for v_blank in range(len(rebanada) + 1, 6):
                     escribir_celda(v_blank, "nil", "")
@@ -449,7 +481,7 @@ try:
                 escribir_celda(7, "pause", "SIGUIENTE ")
                 
             v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]
-            v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] # ¡BUCLE CONTINUO CERRADO CON ÉXITO!
+            v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] 
             v_record = "save" if es_ultima else "pass_down"
             configurar_propiedades_form(v_esc, v_next, v_record)
 
