@@ -1,0 +1,91 @@
+al = COMODIN_TXT_1
+
+ar = AREA
+
+are = AREA
+
+caj = CAJA
+
+cba = CODIGO_BARRAS
+
+cin = CODIGO_INTERNO
+
+cn = CONTEO
+
+cn1 = COMODIN_NUM_1
+
+cn2 = COMODIN_NUM_2
+
+col = COLOR
+
+con = CONTEO
+
+ct1 = COMODIN_TXT_1
+
+ct2 = COMODIN_TXT_2
+
+des = DESCRIPCION
+
+ds = DESCRIPCION
+
+est = ESTADO_PROD
+
+fc = FECHA_CADUCIDAD
+
+fca = FECHA_CADUCIDAD
+
+ic = LPN
+
+io = USUARIO
+
+lot = LOTE
+
+lpn = LPN
+
+lt = LOTE
+
+mar = MARBETE
+
+mb = MARBETE
+
+mca = MARCA
+
+mod = MODELO
+
+nc = No_CONTEO
+
+nct = No_CONTEO
+
+nl = COMODIN_NUM_1
+
+nom = NOMBRE_USUARIO
+
+nse = No_SERIE
+
+pa = COMODIN_TXT_2
+
+ped = PEDIMENTO
+
+ps = CODIGO_INTERNO
+
+pw = USUARIO
+
+rk = TIPO_CONTEO
+
+sk = SKU
+
+sku = SKU
+
+tal = TALLA
+
+tco = TIPO_CONTEO
+
+ter = ID_TERMINAL
+
+ubi = UBICACION
+
+uni = UNIDAD_MEDIDA
+
+us = NOMBRE_USUARIO
+
+usu = USUARIO

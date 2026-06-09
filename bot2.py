@@ -100,6 +100,68 @@ def configurar_1st_lookup(form_coords, tipo_conteo):
     escribir_celda(6, "fixed_data", tipo_conteo)
     escribir_celda(7, "fixed_data", "1")
 
+def inyectar_texto_en_grid(texto_a_ingresar):
+    """Convierte un string en coordenadas exactas del Grid ASCII y da los clics."""
+    grid = MAPA_UI["vista_more"]["grid_ascii"]
+    
+    # 1. Aseguramos que el grid esté limpio antes de empezar
+    pyautogui.click(grid["btn_clear"])
+    time.sleep(0.1)
+    
+    # 2. Bucle matemático de clics
+    for caracter in str(texto_a_ingresar):
+        ascii_val = ord(caracter)
+        
+        # Matemáticas hexadecimales para ubicar fila y columna
+        columna_index = ascii_val // 16 
+        fila_index = ascii_val % 16
+        
+        coord_x = grid["origen_x"] + (columna_index * grid["delta_x"])
+        coord_y = grid["origen_y"] + (fila_index * grid["delta_y"])
+        
+        pyautogui.click(coord_x, coord_y)
+        time.sleep(0.05)
+        
+    # 3. Guardar y salir del grid
+    pyautogui.click(grid["btn_ok"])
+    time.sleep(0.2)
+
+def configurar_boton_more(row_idx, data_type, prefix_text=""):
+    """Da clic en More, detecta el formato por el Data Type y configura."""
+    y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
+    
+    # Clic en el botón "More" de la fila actual
+    pyautogui.click(MAPA_UI["vista_more"]["columna_more_x"], y_actual)
+    time.sleep(0.5)
+    
+    formatos_clasificacion = MAPA_UI["vista_form"]["tabla"]["formatos_more"]
+    
+    if data_type in formatos_clasificacion["formato_1"]:
+        if prefix_text:
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_prefix"])
+            time.sleep(0.1)
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_prefix"])
+            time.sleep(0.3) 
+            inyectar_texto_en_grid(prefix_text)
+            
+    elif data_type in formatos_clasificacion["formato_2"]:
+        pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_save_field"])
+        time.sleep(0.1)
+        if prefix_text:
+            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_prefix"])
+            time.sleep(0.1)
+            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["campo_prefix"])
+            time.sleep(0.3)
+            inyectar_texto_en_grid(prefix_text)
+            
+    elif data_type in formatos_clasificacion["formato_3"]:
+        pyautogui.click(MAPA_UI["vista_more"]["formato_3"]["check_show_time"])
+        time.sleep(0.1)
+        
+    # Salir de la ventana de Propiedades
+    pyautogui.press('enter') 
+    time.sleep(0.2)
+
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación entre pantallas usando atajos de teclado (F y M)."""
     props = MAPA_UI["vista_form"]["properties"]

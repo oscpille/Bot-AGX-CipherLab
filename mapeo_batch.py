@@ -65,7 +65,7 @@ MAPA_UI = {
             "form_9": (365, 480),
             "form_10": (365, 500)
         },
-        
+
         "tabla": {
             "columnas_x": {
                 "data_type": 554,
@@ -135,5 +135,32 @@ MAPA_UI = {
                 "atajo": "p_s_x4"
             }
         }
-    }
+        
+    },
+
+    "vista_more": {
+        "columna_more_x": 1047,
+        "formato_1": {
+            "check_prefix": (458, 370),
+            "campo_prefix": (600, 367),
+            "check_input_mark": (458, 431),
+            "campo_input_mark": (600, 432)
+        },
+        "formato_2": {
+            "check_save_field": (596, 300),
+            "check_prefix": (596, 400),
+            "campo_prefix": (732, 400)
+        },
+        "formato_3": {
+            "check_show_time": (597, 360)
+        },
+        "grid_ascii": {
+            "origen_x": 400,
+            "origen_y": 190,
+            "delta_x": 40,
+            "delta_y": 20,
+            "btn_ok": (1000, 530),
+            "btn_clear": (900, 555)
+        }
+    } 
 }
