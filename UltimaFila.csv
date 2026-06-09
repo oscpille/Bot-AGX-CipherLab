@@ -1,10 +1,5 @@
 ﻿NOMBRE DE QUIEN SOLICITA EL AGX,INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:,FLUJO OPERATIVO:,MARBETE Y UBICACIÓN,¿QUÉ NIVEL DE PRIORIDAD DAREMOS?,DATOS REQUERIDOS
-Pancho Villa,Los guerreros de Cholula Jr. Remasterizados,Ambos,Ambos,a. Primero registrar Marbete y en la pantalla siguiente Ubicación.,"Marbete 5, numérico
-Ubicación de 11 a 19 alfanumerica
-SKU con 15 alfanumérico 
-Color mínimo 3, máximo 15
-Modelo 9 a 19,
-Talla: 2 texto
-Conjunto con 1.
-Proveedor 10-20
-Estado: 9-14."
+Jimena Jiménez ,Comando Delta ,Volúmen,Solo Ubicación,,"Ubicación 10-15 alfanumérico
+SK 5 a 14 
+Modelo 15 texto
+Cantidad: 1-10"
