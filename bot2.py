@@ -6,7 +6,8 @@ import sys
 import textwrap 
 import re 
 import math
-from mapeo_batch import MAPA_UI 
+import pyperclip 
+from mapeo_batch import MAPA_UI
 
 # =========================================================
 # 1. FUNCIONES AUXILIARES Y DE INFRAESTRUCTURA RELACIONAL
@@ -41,11 +42,21 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     pyautogui.press('enter')
     time.sleep(0.05)
     
-    # 2. Escribir Prompt (Filtro Anti-Acentos)
+    # 2. Escribir Prompt (Inyección Anti-Ghosting por Portapapeles)
     if prompt_text:
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.05)
-        pyautogui.write(quitar_acentos(prompt_text), interval=0.02)
+        
+        # Limpiamos el texto y lo mandamos a la memoria de Windows
+        texto_limpio = quitar_acentos(prompt_text)
+        pyperclip.copy(texto_limpio)
+        
+        # EL BLINDAJE: Le damos a Windows 50ms para procesar el portapapeles
+        time.sleep(0.05) 
+        
+        # Inyectamos de golpe (inmune a errores de distribución de teclado)
+        pyautogui.hotkey('ctrl', 'v')
+        time.sleep(0.05)
         
     # 3. Longitudes
     if min_len:
