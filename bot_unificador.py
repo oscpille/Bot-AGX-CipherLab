@@ -7,7 +7,7 @@ import textwrap
 import re 
 import math
 import pyperclip
-from mapeo_batch import MAPA_UI 
+from mapeo_8000 import MAPA_UI 
 
 # =========================================================
 # 1. FUNCIONES AUXILIARES Y DE INFRAESTRUCTURA RELACIONAL
@@ -557,7 +557,14 @@ try:
             if es_ultima:
                 pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.1)
 
+            # --- SCROLL CONDICIONAL (Agnóstico a la versión del escáner) ---
+            if "scroll_tabla" in MAPA_UI["vista_form"]:
+                pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left')
+                time.sleep(0.2)
+
             escribir_celda(0, "prompt", f"DATOS PZxPZ {idx+1}/{total_pags_p}")
+            # ... el resto de tu código de inyección ...
             
             capacidad = 5 if es_ultima else 6
             rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
@@ -610,7 +617,14 @@ try:
             if es_ultima:
                 pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.1)
 
+            # --- SCROLL CONDICIONAL (Agnóstico a la versión del escáner) ---
+            if "scroll_tabla" in MAPA_UI["vista_form"]:
+                pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left')
+                time.sleep(0.2)
+
             escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
+            # ... el resto de tu código de inyección ...
             
             capacidad = 5 if es_ultima else 6
             rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
