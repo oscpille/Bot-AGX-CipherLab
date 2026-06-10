@@ -291,14 +291,27 @@ try:
     dict_ubicacion, dict_captura = {}, {}
     print("➤ Ejecutando Analizador Léxico (Regex)...")
     
+    dict_ubicacion, dict_captura = {}, {}
+    print("➤ Ejecutando Analizador Léxico (Regex)...")
+    
     for linea in str(solicitud['DATOS REQUERIDOS']).split('\n'):
         linea = linea.strip()
         if not linea: continue
+        
         linea_limpia = linea.lower().replace(',', '').replace('.', '').replace(';', '')
         match_nombre = re.match(r'^([^0-9:]+)', linea)
         if not match_nombre: continue
         
+        # 1. Extracción de la palabra principal
         nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en)$', '', match_nombre.group(1).strip()).strip()
+        
+        # 2. ¡ELIMINADOR DE PUNTUACIÓN RESIDUAL! (Adiós al Modelo;)
+        nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
+        
+        # 3. ¡REGLA ANTI-DESBORDAMIENTO (Max 16 caracteres en terminal)!
+        if "fecha de caducidad" in nombre_original.lower():
+            nombre_original = "Caducidad"
+            
         nombre_logico = limpiar_texto(nombre_original)
         
         min_max_final = "3-15" # Fallback estándar
