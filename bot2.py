@@ -112,7 +112,7 @@ def configurar_boton_more(row_idx, data_type, prefix_text=""):
     time.sleep(0.1)
 
 # --- INYECTOR PRINCIPAL DE TABLAS ---
-def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0):
+def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None):
     """Escribe velozmente un renglón, usa portapapeles y configura el botón More."""
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
@@ -169,13 +169,17 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         pyautogui.press('enter')
         time.sleep(0.05)
 
-    # 5. ¡LA MAGIA! Auto-Configurar Botón MORE
-    prefijo_calculado = calcular_prefijo(prompt_text) if prompt_text else ""
+    # 5. ¡LA MAGIA! Auto-Configurar Botón MORE con Modo de Sobrescritura
+    if prefijo_forzado is not None:
+        prefijo_calculado = prefijo_forzado
+    else:
+        prefijo_calculado = calcular_prefijo(prompt_text) if prompt_text else ""
+        
     configurar_boton_more(row_idx, data_type, prefijo_calculado)
 
 
 def configurar_1st_lookup(form_coords, tipo_conteo):
-    """Entra a la pantalla de Login y dibuja el Formato Visual con Lookups y Prefijos."""
+    """Entra a la pantalla de Login y dibuja el Formato Visual forzando Prefijos Fijos."""
     pyautogui.click(form_coords)
     time.sleep(0.75)
     
@@ -184,12 +188,16 @@ def configurar_1st_lookup(form_coords, tipo_conteo):
     
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
-    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1)
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2) 
+    
+    # Inyecciones con prefijos forzados al final de los parámetros
+    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, "pw#")
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, "us#") 
+    
     escribir_celda(4, "nil", "")
     escribir_celda(5, "prompt", "TIPO DE CONTEO:")
-    escribir_celda(6, "fixed_data", tipo_conteo)
-    escribir_celda(7, "fixed_data", "1")
+    
+    escribir_celda(6, "fixed_data", tipo_conteo, "", "", 0, "rk#")
+    escribir_celda(7, "fixed_data", "1", "", "", 0, "nc#")
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
