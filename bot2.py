@@ -6,23 +6,114 @@ import sys
 import textwrap 
 import re 
 import math
-import pyperclip 
-from mapeo_batch import MAPA_UI
+import pyperclip
+from mapeo_batch import MAPA_UI 
 
 # =========================================================
 # 1. FUNCIONES AUXILIARES Y DE INFRAESTRUCTURA RELACIONAL
 # =========================================================
+
+# --- DICCIONARIO INTELIGENTE DE PREFIJOS ---
+# Regla aplicada: Mapeo de la lista proporcionada (gana la clave más corta).
+DICCIONARIO_PREFIJOS = {
+    "area": "ar", "caja": "caj", "barras": "cba", "interno": "ps",
+    "color": "col", "descripcion": "ds", "estado": "est", "caducidad": "fc",
+    "lpn": "ic", "usuario": "pw", "operador": "pw", "lote": "lt",
+    "marbete": "mb", "marca": "mca", "modelo": "mod", "serie": "nse",
+    "pedimento": "ped", "sku": "sk", "talla": "tal", "ubicacion": "ubi",
+    "unidad": "uni", "cantidad": "cn", "conteo": "cn", "contrasena": "ps"
+}
+
+def calcular_prefijo(nombre_pantalla):
+    """Analiza el texto de la pantalla, busca el prefijo ideal y le agrega '#'."""
+    nombre_limpio = limpiar_texto(nombre_pantalla)
+    
+    # 1. Búsqueda exacta en el diccionario
+    for clave, prefijo in DICCIONARIO_PREFIJOS.items():
+        if clave in nombre_limpio:
+            return prefijo + "#"
+            
+    # 2. Fallback: Si es un dato nuevo no mapeado, toma sus primeras 3 letras
+    letras = re.sub(r'[^a-z]', '', nombre_limpio)
+    if len(letras) >= 3:
+        return letras[:3] + "#"
+    elif len(letras) > 0:
+        return letras + "#"
+    return ""
+
 def limpiar_texto(texto):
-    """Quita acentos y pasa a minúsculas para comparaciones exactas de lógica."""
+    """Quita acentos y pasa a minúsculas para comparaciones exactas."""
     texto_sin_acentos = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     return texto_sin_acentos.lower().strip()
 
 def quitar_acentos(texto):
-    """Filtro de seguridad para PyAutoGUI: Quita acentos pero respeta mayúsculas/minúsculas."""
+    """Filtro para PyAutoGUI y Portapapeles: Quita acentos respetando mayúsculas."""
     return unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
 
+# --- MOTORES DE INYECCIÓN DE LA COLUMNA 'MORE' ---
+def inyectar_texto_en_grid(texto_a_ingresar):
+    """Convierte un string a valores ASCII y da clics matemáticos en el Grid."""
+    grid = MAPA_UI["vista_more"]["grid_ascii"]
+    
+    pyautogui.click(grid["btn_clear"])
+    time.sleep(0.1)
+    
+    for caracter in str(texto_a_ingresar):
+        ascii_val = ord(caracter)
+        
+        # Matemáticas de división hexadecimal para coordenadas
+        col_idx = ascii_val // 16 
+        row_idx = ascii_val % 16
+        
+        coord_x = grid["origen_x"] + (col_idx * grid["delta_x"])
+        coord_y = grid["origen_y"] + (row_idx * grid["delta_y"])
+        
+        pyautogui.click(coord_x, coord_y)
+        time.sleep(0.05)
+        
+    pyautogui.click(grid["btn_ok"])
+    time.sleep(0.15)
+
+def configurar_boton_more(row_idx, data_type, prefix_text=""):
+    """Detecta el formato de la fila y configura propiedades avanzadas si aplica."""
+    formatos = MAPA_UI["vista_form"]["tabla"]["formatos_more"]
+    
+    # Blindaje: Si es Prompt, Nil, Pause, etc., NO tiene botón More. Se ignora.
+    if data_type in formatos["bloqueado"] or data_type == "nil":
+        return
+        
+    y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
+    pyautogui.click(MAPA_UI["vista_more"]["columna_more_x"], y_actual)
+    time.sleep(0.4) 
+    
+    if data_type in formatos["formato_1"]:
+        if prefix_text:
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_prefix"])
+            time.sleep(0.1)
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_prefix"])
+            time.sleep(0.3) 
+            inyectar_texto_en_grid(prefix_text)
+            
+    elif data_type in formatos["formato_2"]:
+        pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_save_field"])
+        time.sleep(0.1)
+        if prefix_text:
+            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_prefix"])
+            time.sleep(0.1)
+            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["campo_prefix"])
+            time.sleep(0.3)
+            inyectar_texto_en_grid(prefix_text)
+            
+    elif data_type in formatos["formato_3"]:
+        pyautogui.click(MAPA_UI["vista_more"]["formato_3"]["check_show_time"])
+        time.sleep(0.1)
+        
+    pyautogui.press('enter') 
+    time.sleep(0.1)
+
+# --- INYECTOR PRINCIPAL DE TABLAS ---
 def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0):
-    """Escribe de manera limpia y veloz un renglón de la tabla sin parpadeos."""
+    """Escribe velozmente un renglón, usa portapapeles y configura el botón More."""
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
     
@@ -31,7 +122,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     time.sleep(0.05)
     pyautogui.click(columnas["data_type"], y_actual)
     time.sleep(0.05)
-    pyautogui.press('n') # Reset a Nil
+    pyautogui.press('n') 
     time.sleep(0.05)
     
     if data_type in MAPA_UI["vista_form"]["tabla"]["logica_data_type"]["secuencias"]:
@@ -42,19 +133,15 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     pyautogui.press('enter')
     time.sleep(0.05)
     
-    # 2. Escribir Prompt (Inyección Anti-Ghosting por Portapapeles)
+    # 2. Escribir Prompt (Inyección Anti-Ghosting)
     if prompt_text:
         pyautogui.click(columnas["prompt"], y_actual)
         time.sleep(0.05)
         
-        # Limpiamos el texto y lo mandamos a la memoria de Windows
         texto_limpio = quitar_acentos(prompt_text)
         pyperclip.copy(texto_limpio)
+        time.sleep(0.05) # Blindaje de memoria Windows
         
-        # EL BLINDAJE: Le damos a Windows 50ms para procesar el portapapeles
-        time.sleep(0.05) 
-        
-        # Inyectamos de golpe (inmune a errores de distribución de teclado)
         pyautogui.hotkey('ctrl', 'v')
         time.sleep(0.05)
         
@@ -68,13 +155,13 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         time.sleep(0.05)
         pyautogui.write(max_len, interval=0.02)
         
-    # 4. Asignación Matemática de Fields (1 o 2)
+    # 4. Asignación de Fields
     if num_fields > 0:
         pyautogui.click(columnas["variables_field"], y_actual)
         time.sleep(0.05)
         pyautogui.click(columnas["variables_field"], y_actual)
         time.sleep(0.05)
-        pyautogui.press('n') # Resetea a Nil
+        pyautogui.press('n')
         time.sleep(0.05)
         for _ in range(num_fields):
             pyautogui.press('f')
@@ -82,130 +169,58 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         pyautogui.press('enter')
         time.sleep(0.05)
 
+    # 5. ¡LA MAGIA! Auto-Configurar Botón MORE
+    prefijo_calculado = calcular_prefijo(prompt_text) if prompt_text else ""
+    configurar_boton_more(row_idx, data_type, prefijo_calculado)
+
+
 def configurar_1st_lookup(form_coords, tipo_conteo):
-    """Entra a la pantalla de Login, activa el 1st Lookup y dibuja el Nuevo Formato Visual."""
+    """Entra a la pantalla de Login y dibuja el Formato Visual con Lookups y Prefijos."""
     pyautogui.click(form_coords)
     time.sleep(0.75)
     
     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
     time.sleep(0.2)
     
-    # NUEVO FORMATO: HEADER, CAMPOS Y FOOTER
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
     escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1)
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2) # Formato dinámico
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2) 
     escribir_celda(4, "nil", "")
     escribir_celda(5, "prompt", "TIPO DE CONTEO:")
     escribir_celda(6, "fixed_data", tipo_conteo)
     escribir_celda(7, "fixed_data", "1")
 
-def inyectar_texto_en_grid(texto_a_ingresar):
-    """Convierte un string en coordenadas exactas del Grid ASCII y da los clics."""
-    grid = MAPA_UI["vista_more"]["grid_ascii"]
-    
-    # 1. Aseguramos que el grid esté limpio antes de empezar
-    pyautogui.click(grid["btn_clear"])
-    time.sleep(0.1)
-    
-    # 2. Bucle matemático de clics
-    for caracter in str(texto_a_ingresar):
-        ascii_val = ord(caracter)
-        
-        # Matemáticas hexadecimales para ubicar fila y columna
-        columna_index = ascii_val // 16 
-        fila_index = ascii_val % 16
-        
-        coord_x = grid["origen_x"] + (columna_index * grid["delta_x"])
-        coord_y = grid["origen_y"] + (fila_index * grid["delta_y"])
-        
-        pyautogui.click(coord_x, coord_y)
-        time.sleep(0.05)
-        
-    # 3. Guardar y salir del grid
-    pyautogui.click(grid["btn_ok"])
-    time.sleep(0.2)
-
-def configurar_boton_more(row_idx, data_type, prefix_text=""):
-    """Da clic en More, detecta el formato por el Data Type y configura."""
-    y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
-    
-    # Clic en el botón "More" de la fila actual
-    pyautogui.click(MAPA_UI["vista_more"]["columna_more_x"], y_actual)
-    time.sleep(0.5)
-    
-    formatos_clasificacion = MAPA_UI["vista_form"]["tabla"]["formatos_more"]
-    
-    if data_type in formatos_clasificacion["formato_1"]:
-        if prefix_text:
-            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_prefix"])
-            time.sleep(0.1)
-            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_prefix"])
-            time.sleep(0.3) 
-            inyectar_texto_en_grid(prefix_text)
-            
-    elif data_type in formatos_clasificacion["formato_2"]:
-        pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_save_field"])
-        time.sleep(0.1)
-        if prefix_text:
-            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_prefix"])
-            time.sleep(0.1)
-            pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["campo_prefix"])
-            time.sleep(0.3)
-            inyectar_texto_en_grid(prefix_text)
-            
-    elif data_type in formatos_clasificacion["formato_3"]:
-        pyautogui.click(MAPA_UI["vista_more"]["formato_3"]["check_show_time"])
-        time.sleep(0.1)
-        
-    # Salir de la ventana de Propiedades
-    pyautogui.press('enter') 
-    time.sleep(0.2)
-
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
-    """Enruta la navegación entre pantallas usando atajos de teclado (F y M)."""
+    """Enruta la navegación usando atajos F y M para máxima velocidad."""
     props = MAPA_UI["vista_form"]["properties"]
     
     def aplicar_atajo(valor):
-        """Pulsa F o M la cantidad exacta de veces según el número destino."""
         if isinstance(valor, int):
             for _ in range(valor):
                 pyautogui.press('f')
                 time.sleep(0.03)
         elif isinstance(valor, str) and "menu" in valor.lower():
-            # Extrae el número del texto (ej. de "menu 2" saca el 2)
             num = int(re.search(r'\d+', valor).group())
             for _ in range(num):
                 pyautogui.press('m')
                 time.sleep(0.03)
-        
-        # ¡EL SALVAVIDAS! Forzamos el Enter para cerrar el menú desplegable
         pyautogui.press('enter')
         time.sleep(0.1)
 
-    # 1. Enrutar ESC
-    pyautogui.click(props["esc"]["coords"])
-    time.sleep(0.1)
+    pyautogui.click(props["esc"]["coords"]); time.sleep(0.1)
     aplicar_atajo(esc_id)
     
-    # 2. Enrutar NEXT
-    pyautogui.click(props["next"]["coords"])
-    time.sleep(0.1)
+    pyautogui.click(props["next"]["coords"]); time.sleep(0.1)
     aplicar_atajo(next_id)
     
-    # 3. Enrutar RECORD (Tu truco P -> S x4)
-    pyautogui.click(props["record"]["coords"])
-    time.sleep(0.1)
-    
-    pyautogui.press('p') # Fuerza a Pass down
-    time.sleep(0.1)
+    pyautogui.click(props["record"]["coords"]); time.sleep(0.1)
+    pyautogui.press('p'); time.sleep(0.1)
     
     if record_tipo == 'save':
         for _ in range(4):
             pyautogui.press('s')
             time.sleep(0.03)
-            
-    # ¡EL SALVAVIDAS X2!
     pyautogui.press('enter')
     time.sleep(0.1)
 

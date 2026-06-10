@@ -1,5 +1,8 @@
 ﻿NOMBRE DE QUIEN SOLICITA EL AGX,INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:,FLUJO OPERATIVO:,MARBETE Y UBICACIÓN,¿QUÉ NIVEL DE PRIORIDAD DAREMOS?,DATOS REQUERIDOS
-Jimena Jiménez ,Comando Delta ,Volúmen,Solo Ubicación,,"Ubicación 10-15 alfanumérico
-SK 5 a 14 
-Modelo 15 texto
-Cantidad: 1-10"
+Luis Pérez,Asociación Microsoft de 1700d.C. al 2300d.C.,Ambos,Ambos,c. Registrar ambos en la misma pantalla.,"Marbete 5
+Folio de 11 a 20 numérico 
+Nombre de 20-30 alfanumérico
+Lote 9-16 num
+Talla: 2 texto
+Fecha de caducidad 8 DDMMAAAA
+Modelo; 11-19"
