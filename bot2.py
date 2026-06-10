@@ -74,12 +74,16 @@ def inyectar_texto_en_grid(texto_a_ingresar):
     pyautogui.click(grid["btn_ok"])
     time.sleep(0.15)
 
-def configurar_boton_more(row_idx, data_type, prefix_text=""):
-    """Detecta el formato de la fila y configura propiedades avanzadas si aplica."""
+def configurar_boton_more(row_idx, data_type, prefix_text="", input_mark_char=""):
+    """Detecta el formato de la fila y configura prefijos (Grid ASCII) y marcas de entrada (Teclado directo)."""
     formatos = MAPA_UI["vista_form"]["tabla"]["formatos_more"]
     
-    # Blindaje: Si es Prompt, Nil, Pause, etc., NO tiene botón More. Se ignora.
+    # Blindaje: Si es Prompt, Nil, Pause, etc., NO tiene botón More
     if data_type in formatos["bloqueado"] or data_type == "nil":
+        return
+        
+    # Optimización: Si es Formato 1 pero no hay nada que inyectar, no abrimos el menú
+    if data_type in formatos["formato_1"] and not prefix_text and not input_mark_char:
         return
         
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
@@ -87,12 +91,24 @@ def configurar_boton_more(row_idx, data_type, prefix_text=""):
     time.sleep(0.4) 
     
     if data_type in formatos["formato_1"]:
+        # 1. Configurar Prefix (Este SÍ abre el Grid ASCII)
         if prefix_text:
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_prefix"])
             time.sleep(0.1)
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_prefix"])
             time.sleep(0.3) 
             inyectar_texto_en_grid(prefix_text)
+            
+        # 2. Configurar Input Mark (* o _) -> ¡CORREGIDO! Se escribe directo con teclado
+        if input_mark_char:
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_input_mark"])
+            time.sleep(0.1)
+            pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_input_mark"])
+            time.sleep(0.1) 
+            
+            # Escribimos directamente el carácter (* o _) sin abrir el grid ASCII
+            pyautogui.write(input_mark_char)
+            time.sleep(0.1)
             
     elif data_type in formatos["formato_2"]:
         pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_save_field"])
@@ -112,74 +128,53 @@ def configurar_boton_more(row_idx, data_type, prefix_text=""):
     time.sleep(0.1)
 
 # --- INYECTOR PRINCIPAL DE TABLAS ---
-def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None):
+def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None, input_mark_char=""):
     """Escribe velozmente un renglón, usa portapapeles y configura el botón More."""
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
     
     # 1. Tipo de dato
-    pyautogui.click(columnas["data_type"], y_actual)
-    time.sleep(0.05)
-    pyautogui.click(columnas["data_type"], y_actual)
-    time.sleep(0.05)
-    pyautogui.press('n') 
-    time.sleep(0.05)
+    pyautogui.click(columnas["data_type"], y_actual); time.sleep(0.05)
+    pyautogui.click(columnas["data_type"], y_actual); time.sleep(0.05)
+    pyautogui.press('n'); time.sleep(0.05)
     
     if data_type in MAPA_UI["vista_form"]["tabla"]["logica_data_type"]["secuencias"]:
         seq = MAPA_UI["vista_form"]["tabla"]["logica_data_type"]["secuencias"][data_type]
         for _ in range(seq["pulsaciones"]):
             pyautogui.press(seq["tecla"])
             time.sleep(0.03)
-    pyautogui.press('enter')
-    time.sleep(0.05)
+    pyautogui.press('enter'); time.sleep(0.05)
     
-    # 2. Escribir Prompt (Inyección Anti-Ghosting)
+    # 2. Escribir Prompt
     if prompt_text:
-        pyautogui.click(columnas["prompt"], y_actual)
-        time.sleep(0.05)
-        
-        texto_limpio = quitar_acentos(prompt_text)
-        pyperclip.copy(texto_limpio)
-        time.sleep(0.05) # Blindaje de memoria Windows
-        
-        pyautogui.hotkey('ctrl', 'v')
-        time.sleep(0.05)
+        pyautogui.click(columnas["prompt"], y_actual); time.sleep(0.05)
+        pyperclip.copy(quitar_acentos(prompt_text)); time.sleep(0.05)
+        pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
         
     # 3. Longitudes
     if min_len:
-        pyautogui.click(columnas["min_length"], y_actual)
-        time.sleep(0.05)
+        pyautogui.click(columnas["min_length"], y_actual); time.sleep(0.05)
         pyautogui.write(min_len, interval=0.02)
     if max_len:
-        pyautogui.click(columnas["max_length"], y_actual)
-        time.sleep(0.05)
+        pyautogui.click(columnas["max_length"], y_actual); time.sleep(0.05)
         pyautogui.write(max_len, interval=0.02)
         
     # 4. Asignación de Fields
     if num_fields > 0:
-        pyautogui.click(columnas["variables_field"], y_actual)
-        time.sleep(0.05)
-        pyautogui.click(columnas["variables_field"], y_actual)
-        time.sleep(0.05)
-        pyautogui.press('n')
-        time.sleep(0.05)
+        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.05)
+        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.05)
+        pyautogui.press('n'); time.sleep(0.05)
         for _ in range(num_fields):
-            pyautogui.press('f')
-            time.sleep(0.03)
-        pyautogui.press('enter')
-        time.sleep(0.05)
+            pyautogui.press('f'); time.sleep(0.03)
+        pyautogui.press('enter'); time.sleep(0.05)
 
-    # 5. ¡LA MAGIA! Auto-Configurar Botón MORE con Modo de Sobrescritura
-    if prefijo_forzado is not None:
-        prefijo_calculado = prefijo_forzado
-    else:
-        prefijo_calculado = calcular_prefijo(prompt_text) if prompt_text else ""
-        
-    configurar_boton_more(row_idx, data_type, prefijo_calculado)
+    # 5. Configurar Botón MORE
+    prefijo_calculado = prefijo_forzado if prefijo_forzado is not None else (calcular_prefijo(prompt_text) if prompt_text else "")
+    configurar_boton_more(row_idx, data_type, prefijo_calculado, input_mark_char)
 
 
 def configurar_1st_lookup(form_coords, tipo_conteo):
-    """Entra a la pantalla de Login y dibuja el Formato Visual forzando Prefijos Fijos."""
+    """Entra a la pantalla de Login y dibuja el Formato Visual forzando Prefijos Fijos y Asteriscos."""
     pyautogui.click(form_coords)
     time.sleep(0.75)
     
@@ -189,15 +184,14 @@ def configurar_1st_lookup(form_coords, tipo_conteo):
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
     
-    # Inyecciones con prefijos forzados al final de los parámetros
-    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, "pw#")
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, "us#") 
+    # Inyecciones con prefijos forzados y la marca '*' para contraseñas
+    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="pw#", input_mark_char="*")
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="us#") 
     
     escribir_celda(4, "nil", "")
     escribir_celda(5, "prompt", "TIPO DE CONTEO:")
-    
-    escribir_celda(6, "fixed_data", tipo_conteo, "", "", 0, "rk#")
-    escribir_celda(7, "fixed_data", "1", "", "", 0, "nc#")
+    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="rk#")
+    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nc#")
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
@@ -487,7 +481,8 @@ try:
             escribir_celda(0, "prompt", "LOCALIZACION 1/2")
             escribir_celda(1, "nil", "")
             item1 = loc_items_list[0]
-            escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1])
+            # AQUÍ SE AGREGÓ EL GUION BAJO
+            escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], input_mark_char="_")
             escribir_celda(3, "nil", "")
             escribir_celda(4, "nil", "")
             escribir_celda(5, "nil", "")
@@ -500,7 +495,8 @@ try:
             escribir_celda(0, "prompt", "LOCALIZACION 2/2")
             escribir_celda(1, "nil", "")
             item2 = loc_items_list[1]
-            escribir_celda(2, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1])
+            # AQUÍ SE AGREGÓ EL GUION BAJO
+            escribir_celda(2, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], input_mark_char="_")
             escribir_celda(3, "nil", "")
             escribir_celda(4, "nil", "")
             escribir_celda(5, "nil", "")
@@ -516,16 +512,18 @@ try:
             
             if len(loc_items_list) == 1:
                 item = loc_items_list[0]
-                escribir_celda(2, item['tipo'], f"{item['nombre_pantalla']}: ", item['longitud'].split('-')[0], item['longitud'].split('-')[1])
+                # AQUÍ SE AGREGÓ EL GUION BAJO
+                escribir_celda(2, item['tipo'], f"{item['nombre_pantalla']}: ", item['longitud'].split('-')[0], item['longitud'].split('-')[1], input_mark_char="_")
                 escribir_celda(3, "nil", "")
                 escribir_celda(4, "nil", "")
                 escribir_celda(5, "nil", "")
             elif len(loc_items_list) == 2:
                 item1 = loc_items_list[0]
                 item2 = loc_items_list[1]
-                escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1])
+                # AQUÍ SE AGREGÓ EL GUION BAJO A AMBOS
+                escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], input_mark_char="_")
                 escribir_celda(3, "nil", "")
-                escribir_celda(4, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1])
+                escribir_celda(4, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], input_mark_char="_")
                 escribir_celda(5, "nil", "")
                 
             escribir_celda(6, "prompt", "TIPO DE CONTEO:")
@@ -567,13 +565,15 @@ try:
             
             for r_idx, v_info in enumerate(rebanada):
                 num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
-                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field)
+                # Se agrega el guion bajo a cada variable dinámica
+                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 
             if es_ultima:
                 for v_blank in range(len(rebanada) + 1, 6):
                     escribir_celda(v_blank, "nil", "")
                 escribir_celda(6, "pause", "[ENTER] O [ESC]")
-                escribir_celda(7, "fixed_data", "1")
+                # Agregamos el prefijo cn# al Fixed Data "1" de Piezas
+                escribir_celda(7, "fixed_data", "1", prefijo_forzado="cn#")
             else:
                 for v_blank in range(len(rebanada) + 1, 7):
                     escribir_celda(v_blank, "nil", "")
@@ -618,15 +618,16 @@ try:
             
             for r_idx, v_info in enumerate(rebanada):
                 num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
-                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field)
+                # Se agrega el guion bajo a cada variable dinámica
+                escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 
             if es_ultima:
                 for v_blank in range(len(rebanada) + 1, 6):
                     escribir_celda(v_blank, "nil", "")
                     
-                # Inyecta dinámicamente la Cantidad (del Excel o el Default 1-10)
+                # Inyecta dinámicamente la Cantidad CON EL GUION BAJO
                 c_min, c_max = info_cantidad['longitud'].split('-')
-                escribir_celda(6, info_cantidad['tipo'], f"{info_cantidad['nombre_pantalla']}: ", c_min, c_max)
+                escribir_celda(6, info_cantidad['tipo'], f"{info_cantidad['nombre_pantalla']}: ", c_min, c_max, input_mark_char="_")
                 
                 escribir_celda(7, "pause", "[ENTER] O [ESC]")
             else:
