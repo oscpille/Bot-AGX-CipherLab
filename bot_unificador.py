@@ -7,7 +7,8 @@ import textwrap
 import re 
 import math
 import pyperclip
-from mapeo_8000 import MAPA_UI 
+from openpyxl import load_workbook
+import time
 
 # =========================================================
 # 1. FUNCIONES AUXILIARES Y DE INFRAESTRUCTURA RELACIONAL
@@ -162,29 +163,52 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     # 4. Asignación de Fields
     if num_fields > 0:
         pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.05)
-        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.05)
-        pyautogui.press('n'); time.sleep(0.05)
-        for _ in range(num_fields):
-            pyautogui.press('f'); time.sleep(0.03)
-        pyautogui.press('enter'); time.sleep(0.05)
+        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.1)
+        
+        # Reseteamos a 'None' y le damos tiempo a la interfaz de reaccionar
+        pyautogui.press('n'); time.sleep(0.15) 
+        
+        # Detectamos si estamos en la versión 8200 para preparar el "Cazador de Popups"
+        es_8200 = "scroll_tabla" in MAPA_UI.get("vista_form", {})
+        
+        for iteracion in range(num_fields):
+            pyautogui.press('f')
+            time.sleep(0.15)
+            
+            # ¡EL CAZADOR DE POPUPS! (Mata la advertencia solo en el 8200 y en la primera letra)
+            if es_8200 and iteracion == 0:
+                pyautogui.press('enter')
+                time.sleep(0.15)
+                
+        pyautogui.press('enter'); time.sleep(0.05) 
 
     # 5. Configurar Botón MORE
     prefijo_calculado = prefijo_forzado if prefijo_forzado is not None else (calcular_prefijo(prompt_text) if prompt_text else "")
     configurar_boton_more(row_idx, data_type, prefijo_calculado, input_mark_char)
 
 
-def configurar_1st_lookup(form_coords, tipo_conteo):
-    """Entra a la pantalla de Login y dibuja el Formato Visual forzando Prefijos Fijos y Asteriscos."""
+def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
+    """Entra a la pantalla de Login, configura Properties y dibuja el Formato Visual."""
     pyautogui.click(form_coords)
     time.sleep(0.75)
     
+    # --- 1. PROPERTIES (Antes de que el scroll las oculte) ---
+    configurar_propiedades_form("menu 2", next_form_id, "pass_down")
+    
+    # --- 2. LOOKUP ---
     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
     time.sleep(0.2)
     
+    # --- 3. SCROLL CONDICIONAL (Agnóstico a la versión del escáner) ---
+    if "scroll_tabla" in MAPA_UI["vista_form"]:
+        pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+        pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left')
+        time.sleep(0.2)
+        
+    # --- 4. LLENAR TABLA ---
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
     
-    # Inyecciones con prefijos forzados y la marca '*' para contraseñas
     escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="pw#", input_mark_char="*")
     escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="us#") 
     
@@ -271,27 +295,40 @@ def asignar_piscina_forms(es_pieza, es_volumen, dict_captura, dict_ubicacion, se
 # =========================================================
 # 2. PROCESAMIENTO E INTERPRETACIÓN DE DATOS (FASE 2)
 # =========================================================
-ruta_excel = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\FORMATO DE SOLICITUD DE AGX.xlsx"
-ruta_csv = r"C:\Users\dell\Documents\Bot AGX\UltimaFila.csv"
+ruta_excel = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\SOLICITUD DE AGX.xlsx"
 
 TRADUCCION_TIPOS = {
     "num": "integer", "numerico": "integer", "entero": "integer", "decimal": "real",
     "alfanum": "alphameric", "alfanumerico": "alphameric", "texto": "text", "letras": "letter"
 }
 
+# Inicializamos la variable global para que las funciones de la Fase 1 no arrojen error
+MAPA_UI = {}
+
 try:
-    print("➤ Iniciando lectura desde OneDrive...")
-    df = pd.read_excel(ruta_excel, usecols="F:K", engine='openpyxl').dropna(how='all')
-    df.iloc[-1:].to_csv(ruta_csv, index=False, encoding='utf-8-sig')
-    solicitud = pd.read_csv(ruta_csv, encoding='utf-8-sig').iloc[0]
+    print("➤ Iniciando lectura ultrarrápida desde OneDrive (Calamine)...")
+    # Deja que Calamine lea toda la tabla automáticamente
+    df = pd.read_excel(ruta_excel, engine='calamine').dropna(how='all')
     
+    solicitud = df.iloc[-1]
+    
+    # --- EL CEREBRO BILINGÜE: CARGA DINÁMICA DE COORDENADAS ---
+    modelo_solicitado = str(solicitud['¿QUÉ MODELO DE AGX NECESITAS?']).strip()
+    
+    if "8200" in modelo_solicitado:
+        print("➤ Configuración Detectada: MODELO 8200")
+        import mapeo_8200
+        MAPA_UI.update(mapeo_8200.MAPA_UI)
+    else:
+        print("➤ Configuración Detectada: MODELO 8000")
+        import mapeo_8000
+        MAPA_UI.update(mapeo_8000.MAPA_UI)
+        
+    # --- VARIABLES DE NEGOCIO ---
     cliente = str(solicitud['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']).strip().upper()
     flujo_crudo = limpiar_texto(solicitud['FLUJO OPERATIVO:'])
     es_pieza = "pieza" in flujo_crudo or "ambos" in flujo_crudo
     es_volumen = "volumen" in flujo_crudo or "ambos" in flujo_crudo
-    
-    dict_ubicacion, dict_captura = {}, {}
-    print("➤ Ejecutando Analizador Léxico (Regex)...")
     
     dict_ubicacion, dict_captura = {}, {}
     print("➤ Ejecutando Analizador Léxico (Regex)...")
@@ -304,19 +341,19 @@ try:
         match_nombre = re.match(r'^([^0-9:]+)', linea)
         if not match_nombre: continue
         
-        # 1. Extracción de la palabra principal
-        nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en)$', '', match_nombre.group(1).strip()).strip()
+        # 1. Extracción de la palabra principal (Blindado con más preposiciones)
+        nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en|a|al|hasta)$', '', match_nombre.group(1).strip()).strip()
         
-        # 2. ¡ELIMINADOR DE PUNTUACIÓN RESIDUAL! (Adiós al Modelo;)
+        # 2. ELIMINADOR DE PUNTUACIÓN RESIDUAL
         nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
         
-        # 3. ¡REGLA ANTI-DESBORDAMIENTO (Max 16 caracteres en terminal)!
+        # 3. REGLA ANTI-DESBORDAMIENTO
         if "fecha de caducidad" in nombre_original.lower():
             nombre_original = "Caducidad"
             
         nombre_logico = limpiar_texto(nombre_original)
         
-        min_max_final = "3-15" # Fallback estándar
+        min_max_final = "3-15"
         rango_match = re.search(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', linea_limpia)
         if rango_match:
             min_max_final = f"{rango_match.group(1)}-{rango_match.group(2)}"
@@ -327,20 +364,29 @@ try:
         tipo_bruto = "alfanumerico"
         for t in ["numérico", "numerico", "num", "entero", "decimal", "texto", "letras"]:
             if t in linea_limpia: tipo_bruto = t; break
+            
+        # --- NUEVA DETECCIÓN DE CATÁLOGO ---
+        # Usamos limpiar_texto para atrapar "catálogo", "catalogo", "CATÁLOGO", etc.
+        es_catalogo = "catalogo" in limpiar_texto(linea) 
         
-        datos = {'nombre_pantalla': nombre_original, 'longitud': min_max_final, 'tipo': TRADUCCION_TIPOS.get(limpiar_texto(tipo_bruto), "alphameric")}
+        # Agregamos la etiqueta al diccionario de la variable
+        datos = {
+            'nombre_pantalla': nombre_original, 
+            'longitud': min_max_final, 
+            'tipo': TRADUCCION_TIPOS.get(limpiar_texto(tipo_bruto), "alphameric"),
+            'es_catalogo': es_catalogo
+        }
         
         if "marbete" in nombre_logico or "ubicacion" in nombre_logico:
             dict_ubicacion[nombre_logico] = datos
         else:
             dict_captura[nombre_logico] = datos
 
-    # --- ANÁLISIS DE PRIORIDADES Y LOCALIZACIONES REALES ---
+    # --- ANÁLISIS DE PRIORIDADES ---
     prioridad_str = str(solicitud.get('¿QUÉ NIVEL DE PRIORIDAD DAREMOS?', '')).lower()
     es_primero_ubicacion = "primero registrar ubicacion" in limpiar_texto(prioridad_str) or "primero registrar ubicación" in prioridad_str
     regla_separar = "siguiente" in prioridad_str
 
-    # Armar lista real de localizaciones respetando el orden solicitado en el Excel
     loc_items = []
     v_marbete = next((v for k, v in dict_ubicacion.items() if 'marbete' in k), None)
     v_ubicacion = next((v for k, v in dict_ubicacion.items() if 'ubicacion' in k), None)
@@ -353,27 +399,74 @@ try:
         loc_items = [v_ubicacion]
 
     # --- EXTRACCIÓN Y CONFIGURACIÓN DE 'CANTIDAD' ---
-    # Valores por defecto solicitados: Min 1, Max 10
     info_cantidad = {'tipo': 'integer', 'nombre_pantalla': 'Cantidad', 'longitud': '1-10'} 
     claves_a_borrar = []
     
     for k, v in dict_captura.items():
-        if "cantidad" in k:
-            info_cantidad = v  # Sobrescribe con lo que pidió el Excel
+        if "cantidad" in k: # Búsqueda estricta de la palabra correcta
+            info_cantidad = v  
+            info_cantidad['nombre_pantalla'] = 'Cantidad' # Blindaje: Forzamos la ortografía perfecta para la pantalla
             claves_a_borrar.append(k)
             
-    # Lo eliminamos de la lista general para que no se duplique ni aparezca en Pieza x Pieza
     for k in claves_a_borrar:
         del dict_captura[k]
 
-    # Cálculo del múltiplo de 5 para el SKU
-    multiplo_sku = 20
-    for k, v in dict_captura.items():
-        if "sku" in k:
-            multiplo_sku = ((int(v['longitud'].split('-')[1]) + 4) // 5) * 5; break
+    # --- CÁLCULO DE MÚLTIPLO SKU ---
+    # --- CÁLCULO DE MÚLTIPLO CATÁLOGO DINÁMICO ---
+    multiplo_catalogo = 20
+    catalogo_asignado = False
+    
+    todas_las_vars = list(dict_ubicacion.values()) + list(dict_captura.values())
+    
+    # 1. Buscar si la solicitud pidió explícitamente cargar el catálogo en alguna variable
+    for v in todas_las_vars:
+        if v.get('es_catalogo'):
+            multiplo_catalogo = ((int(v['longitud'].split('-')[1]) + 4) // 5) * 5
+            catalogo_asignado = True
+            break
+            
+    # 2. Respaldo: Si nadie lo pidió, buscar el SKU por defecto y etiquetarlo
+    if not catalogo_asignado:
+        for v in todas_las_vars:
+            if "sku" in limpiar_texto(v['nombre_pantalla']):
+                v['es_catalogo'] = True
+                multiplo_catalogo = ((int(v['longitud'].split('-')[1]) + 4) // 5) * 5
+                break
 
-    # Generación de la ruta dinámica
     plan_vuelo = asignar_piscina_forms(es_pieza, es_volumen, dict_captura, dict_ubicacion, regla_separar)
+
+# =========================================================
+# 2.5 CHECKLIST DE PRE-VUELO (CONFIRMACIÓN DE DATOS)
+# =========================================================
+    solicitante = str(solicitud.get('NOMBRE DE QUIEN SOLICITA EL AGX', 'No especificado')).strip()
+    
+    modelo_final = '8200' if '8200' in modelo_solicitado else '8000'
+    
+    print("\n" + "="*55)
+    print("📋 RESUMEN DE LA SOLICITUD A INYECTAR")
+    print("="*55)
+    print(f"➤ Modelo de AGX  : {modelo_final}")
+    print(f"➤ Pedido por     : {solicitante}")
+    print(f"➤ Inventario para: {cliente}")
+    print("➤ Datos interpretados por el bot:")
+    
+    todas_las_variables = loc_items + list(dict_captura.values())
+    if 'Cantidad' in info_cantidad['nombre_pantalla']:
+        todas_las_variables.append(info_cantidad)
+        
+    for var in todas_las_variables:
+        if var is not None:
+            # --- NUEVO: Indicador visual dinámico para el Catálogo ---
+            indicativo_lookup = " <- 2nd Lookup File" if var.get('es_catalogo') else ""
+            print(f"   • {var['nombre_pantalla']} (Longitud: {var['longitud']}){indicativo_lookup}")
+    
+    print("="*55)
+    
+    # Pausa de seguridad que detiene el código hasta que respondas
+    respuesta = input("\n¿Comenzamos? (s/n): ").strip().lower()
+    if respuesta != 's':
+        print("\n🛑 Proceso abortado por el usuario. Saliendo del sistema...")
+        sys.exit()
 
 except Exception as e:
     print(f"❌ Error en la curación de datos: {e}"); sys.exit()
@@ -381,12 +474,22 @@ except Exception as e:
 # =========================================================
 # 3. EL CEREBRO DE EJECUCIÓN PROCEDURAL (FASE 3)
 # =========================================================
-print("🤖 Iniciando Bot en 5 segundos..."); time.sleep(5)
+print("\n🤖 Iniciando Bot en 5 segundos. ¡Suelta el mouse y el teclado!..."); time.sleep(5)
 
 try:
+    # --- VARIABLE DE ENTORNO PARA NAVEGACIÓN ---
+    es_8200 = "scroll_tabla" in MAPA_UI["vista_form"]
+
     # --- STEP 1: CONFIGURAR LOS MENÚS EN CASCADA ---
-    print("\n➤ Desplegando directorio Menu...")
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.5)
+    if es_8200:
+        print("\n➤ Entorno 8200: Desplegando Menu, Lookup y Form simultáneamente...")
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.3)
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.3)
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.3)
+    else:
+        print("\n➤ Entorno 8000: Desplegando solo Menu...")
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.5)
+
     pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.75)
     
     lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
@@ -396,9 +499,14 @@ try:
     for i in range(min(len(lineas_cliente), 3)):
         pyautogui.click(coords_items[i]); time.sleep(0.05)
         pyautogui.write(lineas_cliente[i], interval=0.03)
-        pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.05)
-        pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.15)
-        pyautogui.click(dicc_nexts[i]["menu_2"]); time.sleep(0.05)
+        
+        # 1 clic para abrir el desplegable
+        pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.2)
+        
+        # Navegación universal por teclado (presionar 'M' 2 veces = Menu 2)
+        pyautogui.press('m'); time.sleep(0.03)
+        pyautogui.press('m'); time.sleep(0.03)
+        pyautogui.press('enter'); time.sleep(0.05)
 
     # --- CONFIGURAR MENU 2 CON TRUCO ALFABÉTICO ('F') ---
     print("➤ Configurando Menu 2 (Tipos de Conteo)...")
@@ -458,8 +566,10 @@ try:
         pyautogui.press('enter')
 
     # --- STEP 2: COLAPSAR Y PASAR A LOOKUPS ---
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.4)
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.4)
+    if not es_8200:
+        # Solo en el 8000 se cierra el menú y se abre el lookup
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.4)
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.4)
     
     # Configurar DBFs de manera directa (Sin parpadeos)
     pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"]); time.sleep(0.5)
@@ -467,68 +577,100 @@ try:
     pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"]); pyautogui.write('10')
     
     pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.5)
-    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_sku))
+    pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_catalogo))
 
     # --- STEP 3: DESPLEGAR COMPACTO DE FORMS ---
-    pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.4)
+    if not es_8200:
+        # Solo en el 8000 necesitamos desplegar Forms en este punto
+        pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.4)
+        
     listado_vars = list(dict_captura.values())
 
     def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_texto):
         """Dibuja dinámicamente las pantallas de localización (1 sola o separadas)."""
         if route_dict.get('loc2') and len(loc_items_list) == 2:
-            # PANTALLA 1 (Marbete o Ubicación según prioridad)
+            # ================= PANTALLA 1/2 =================
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.5)
+            configurar_propiedades_form(route_dict['login'], route_dict['loc2'], "pass_down")
+            
+            # --- LOOKUP DINÁMICO (Antes del scroll) ---
+            if loc_items_list[0].get('es_catalogo'):
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
+                
+            if "scroll_tabla" in MAPA_UI["vista_form"]:
+                pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left'); time.sleep(0.2)
+                
             escribir_celda(0, "prompt", "LOCALIZACION 1/2")
             escribir_celda(1, "nil", "")
             item1 = loc_items_list[0]
-            # AQUÍ SE AGREGÓ EL GUION BAJO
-            escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], input_mark_char="_")
+            nf1 = 1 if item1.get('es_catalogo') else 0
+            escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], nf1, input_mark_char="_")
             escribir_celda(3, "nil", "")
             escribir_celda(4, "nil", "")
             escribir_celda(5, "nil", "")
             escribir_celda(6, "prompt", "TIPO DE CONTEO:")
             escribir_celda(7, "prompt", tipo_conteo_texto)
-            configurar_propiedades_form(route_dict['login'], route_dict['loc2'], "pass_down")
             
-            # PANTALLA 2 (El dato restante)
+            # ================= PANTALLA 2/2 =================
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc2']}"]); time.sleep(0.5)
+            configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0], "pass_down")
+            
+            # --- LOOKUP DINÁMICO (Antes del scroll) ---
+            if loc_items_list[1].get('es_catalogo'):
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
+                
+            if "scroll_tabla" in MAPA_UI["vista_form"]:
+                pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left'); time.sleep(0.2)
+                
             escribir_celda(0, "prompt", "LOCALIZACION 2/2")
             escribir_celda(1, "nil", "")
             item2 = loc_items_list[1]
-            # AQUÍ SE AGREGÓ EL GUION BAJO
-            escribir_celda(2, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], input_mark_char="_")
+            nf2 = 1 if item2.get('es_catalogo') else 0
+            escribir_celda(2, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], nf2, input_mark_char="_")
             escribir_celda(3, "nil", "")
             escribir_celda(4, "nil", "")
             escribir_celda(5, "nil", "")
             escribir_celda(6, "prompt", "TIPO DE CONTEO:")
             escribir_celda(7, "prompt", tipo_conteo_texto)
-            configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0], "pass_down")
             return route_dict['loc2']
+            
         else:
-            # PANTALLA ÚNICA (Solo hay 1 dato, o pidieron Ambos juntos)
+            # ================= PANTALLA ÚNICA =================
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.5)
+            configurar_propiedades_form(route_dict['login'], route_dict['datos'][0], "pass_down")
+            
+            # --- LOOKUP DINÁMICO (Antes del scroll) ---
+            if any(item.get('es_catalogo') for item in loc_items_list):
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
+                
+            if "scroll_tabla" in MAPA_UI["vista_form"]:
+                pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left'); time.sleep(0.2)
+                
             escribir_celda(0, "prompt", "LOCALIZACION 1/1")
             escribir_celda(1, "nil", "")
             
             if len(loc_items_list) == 1:
                 item = loc_items_list[0]
-                # AQUÍ SE AGREGÓ EL GUION BAJO
-                escribir_celda(2, item['tipo'], f"{item['nombre_pantalla']}: ", item['longitud'].split('-')[0], item['longitud'].split('-')[1], input_mark_char="_")
+                nf = 1 if item.get('es_catalogo') else 0
+                escribir_celda(2, item['tipo'], f"{item['nombre_pantalla']}: ", item['longitud'].split('-')[0], item['longitud'].split('-')[1], nf, input_mark_char="_")
                 escribir_celda(3, "nil", "")
                 escribir_celda(4, "nil", "")
                 escribir_celda(5, "nil", "")
             elif len(loc_items_list) == 2:
                 item1 = loc_items_list[0]
                 item2 = loc_items_list[1]
-                # AQUÍ SE AGREGÓ EL GUION BAJO A AMBOS
-                escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], input_mark_char="_")
+                nf1 = 1 if item1.get('es_catalogo') else 0
+                nf2 = 1 if item2.get('es_catalogo') else 0
+                escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], nf1, input_mark_char="_")
                 escribir_celda(3, "nil", "")
-                escribir_celda(4, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], input_mark_char="_")
+                escribir_celda(4, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], nf2, input_mark_char="_")
                 escribir_celda(5, "nil", "")
                 
             escribir_celda(6, "prompt", "TIPO DE CONTEO:")
             escribir_celda(7, "prompt", tipo_conteo_texto)
-            configurar_propiedades_form(route_dict['login'], route_dict['datos'][0], "pass_down")
             return route_dict['loc1']
 
     # =========================================================
@@ -538,9 +680,8 @@ try:
         p_route = plan_vuelo['pieza']
         print(f"\n➤ Construyendo Interfaz Gráfica de Piezas (Inicia Form {p_route['login']})...")
         
-        # 1. Login
-        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ")
-        configurar_propiedades_form("menu 2", p_route['loc1'], "pass_down")
+        # 1. Login (¡CÓDIGO ACTUALIZADO!)
+        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
         
         # 2. Localizaciones Dinámicas
         esc_retorno_datos = inyectar_localizaciones_formato(p_route, loc_items, "Pieza x Pieza")
@@ -551,45 +692,48 @@ try:
         
         for idx, f_num in enumerate(p_route['datos']):
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.5)
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
-            
             es_ultima = (idx == total_pags_p - 1)
+            
+            # Pre-calculamos la rebanada de datos para saber si aquí va el catálogo
+            capacidad = 5 if es_ultima else 6
+            rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
+            
+            # --- 1. PROPERTIES ---
+            p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]
+            p_next = p_route['datos'][0] if es_ultima else p_route['datos'][idx + 1] 
+            p_record = "save" if es_ultima else "pass_down"
+            configurar_propiedades_form(p_esc, p_next, p_record)
+            
+            # --- 2. LOOKUP DINÁMICO ---
+            if any(v.get('es_catalogo') for v in rebanada):
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
+            
+            # --- 3. DATE & TIME STAMP ---
             if es_ultima:
                 pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.1)
 
-            # --- SCROLL CONDICIONAL (Agnóstico a la versión del escáner) ---
+            # --- 4. SCROLL CONDICIONAL ---
             if "scroll_tabla" in MAPA_UI["vista_form"]:
                 pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left')
-                time.sleep(0.2)
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left'); time.sleep(0.2)
 
+            # --- 5. LLENAR TABLA ---
             escribir_celda(0, "prompt", f"DATOS PZxPZ {idx+1}/{total_pags_p}")
-            # ... el resto de tu código de inyección ...
-            
-            capacidad = 5 if es_ultima else 6
-            rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
-            p_idx_global += len(rebanada)
+            p_idx_global += len(rebanada) # Actualizamos el índice global después
             
             for r_idx, v_info in enumerate(rebanada):
-                num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
-                # Se agrega el guion bajo a cada variable dinámica
+                num_field = 1 if v_info.get('es_catalogo') else 0
                 escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 
             if es_ultima:
                 for v_blank in range(len(rebanada) + 1, 6):
                     escribir_celda(v_blank, "nil", "")
                 escribir_celda(6, "pause", "[ENTER] O [ESC]")
-                # Agregamos el prefijo cn# al Fixed Data "1" de Piezas
                 escribir_celda(7, "fixed_data", "1", prefijo_forzado="cn#")
             else:
                 for v_blank in range(len(rebanada) + 1, 7):
                     escribir_celda(v_blank, "nil", "")
                 escribir_celda(7, "pause", "[SIGUIENTE] ->")
-                
-            p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]
-            p_next = p_route['datos'][0] if es_ultima else p_route['datos'][idx + 1] 
-            p_record = "save" if es_ultima else "pass_down"
-            configurar_propiedades_form(p_esc, p_next, p_record)
 
     # =========================================================
     # INYECCIÓN CONTINUA DE LA RAMA B: VOLUMEN
@@ -599,8 +743,7 @@ try:
         print(f"\n➤ Construyendo Interfaz Gráfica de Volumen (Inicia Form {v_route['login']})...")
         
         # 1. Login
-        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL")
-        configurar_propiedades_form("menu 2", v_route['loc1'], "pass_down")
+        configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
         
         # 2. Localizaciones Dinámicas
         esc_retorno_datos_v = inyectar_localizaciones_formato(v_route, loc_items, "Conteo x Volumen")
@@ -611,48 +754,50 @@ try:
         
         for idx, f_num in enumerate(v_route['datos']):
             pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.5)
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
-            
             es_ultima = (idx == total_pags_v - 1)
+            
+            # Pre-calculamos la rebanada de datos para saber si aquí va el catálogo
+            capacidad = 5 if es_ultima else 6
+            rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
+            
+            # --- 1. PROPERTIES ---
+            v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]
+            v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] 
+            v_record = "save" if es_ultima else "pass_down"
+            configurar_propiedades_form(v_esc, v_next, v_record)
+            
+            # --- 2. LOOKUP DINÁMICO ---
+            if any(v.get('es_catalogo') for v in rebanada):
+                pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.1)
+            
+            # --- 3. DATE & TIME STAMP ---
             if es_ultima:
                 pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.1)
 
-            # --- SCROLL CONDICIONAL (Agnóstico a la versión del escáner) ---
+            # --- 4. SCROLL CONDICIONAL ---
             if "scroll_tabla" in MAPA_UI["vista_form"]:
                 pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left')
-                time.sleep(0.2)
+                pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.3, button='left'); time.sleep(0.2)
 
+            # --- 5. LLENAR TABLA ---
             escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
-            # ... el resto de tu código de inyección ...
-            
-            capacidad = 5 if es_ultima else 6
-            rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
-            v_idx_global += len(rebanada)
+            v_idx_global += len(rebanada) # Actualizamos el índice global después
             
             for r_idx, v_info in enumerate(rebanada):
-                num_field = 1 if "sku" in limpiar_texto(v_info['nombre_pantalla']) else 0
-                # Se agrega el guion bajo a cada variable dinámica
+                num_field = 1 if v_info.get('es_catalogo') else 0
                 escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 
             if es_ultima:
                 for v_blank in range(len(rebanada) + 1, 6):
                     escribir_celda(v_blank, "nil", "")
                     
-                # Inyecta dinámicamente la Cantidad CON EL GUION BAJO
                 c_min, c_max = info_cantidad['longitud'].split('-')
                 escribir_celda(6, info_cantidad['tipo'], f"{info_cantidad['nombre_pantalla']}: ", c_min, c_max, input_mark_char="_")
-                
                 escribir_celda(7, "pause", "[ENTER] O [ESC]")
             else:
                 for v_blank in range(len(rebanada) + 1, 7):
                     escribir_celda(v_blank, "nil", "")
                 escribir_celda(7, "pause", "[SIGUIENTE] ->")
-                
-            v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]
-            v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] 
-            v_record = "save" if es_ultima else "pass_down"
-            configurar_propiedades_form(v_esc, v_next, v_record)
 
     print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO PERFECTAMENTE CON EL NUEVO FORMATO VISUAL!")
 
