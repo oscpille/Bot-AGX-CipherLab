@@ -310,7 +310,20 @@ try:
     # Deja que Calamine lea toda la tabla automáticamente
     df = pd.read_excel(ruta_excel, engine='calamine').dropna(how='all')
     
-    solicitud = df.iloc[-1]
+    # --- SISTEMA DE COLA INTELIGENTE (FIFO) ---
+    # 1. Filtramos la tabla buscando solo las que dicen "PENDIENTE"
+    df_pendientes = df[df['ESTATUS:'].astype(str).str.strip().str.upper() == 'PENDIENTE']
+    
+    # 2. Seguro anticolisiones: Si no hay pendientes, cerramos el programa
+    if df_pendientes.empty:
+        print("\n✅ Bandeja limpia: No hay solicitudes PENDIENTES por procesar. Cerrando...")
+        sys.exit()
+        
+    # 3. Tomamos la PRIMERA petición pendiente (la más antigua en la cola)
+    solicitud = df_pendientes.iloc[0]
+    indice_excel = solicitud.name + 2  # Guardamos en qué fila de Excel está por si queremos actualizarla después
+    
+    print(f"➤ Atendiendo solicitud en la fila {indice_excel} de la cola de trabajo.")
     
     # --- EL CEREBRO BILINGÜE: CARGA DINÁMICA DE COORDENADAS ---
     modelo_solicitado = str(solicitud['¿QUÉ MODELO DE AGX NECESITAS?']).strip()
