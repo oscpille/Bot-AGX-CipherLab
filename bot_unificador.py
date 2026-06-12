@@ -360,13 +360,20 @@ try:
         # 2. ELIMINADOR DE PUNTUACIÓN RESIDUAL
         nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
         
-        # 3. REGLA ANTI-DESBORDAMIENTO
+        # 3. REGLAS VISUALES Y ANTI-DESBORDAMIENTO
         if "fecha de caducidad" in nombre_original.lower():
             nombre_original = "Caducidad"
+        elif "numero de caja" in limpiar_texto(nombre_original):
+            nombre_original = "Caja"
             
         nombre_logico = limpiar_texto(nombre_original)
         
-        min_max_final = "3-15"
+        # --- LONGITUD POR DEFECTO INTELIGENTE ---
+        # Si la línea hace referencia a cantidad, su base por defecto es 1-10.
+        # Para cualquier otro dato, la base por defecto se mantiene en 3-15.
+        longitud_base = "1-10" if "cantidad" in nombre_logico else "3-15"
+        
+        min_max_final = longitud_base
         rango_match = re.search(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', linea_limpia)
         if rango_match:
             min_max_final = f"{rango_match.group(1)}-{rango_match.group(2)}"
@@ -375,8 +382,11 @@ try:
             if num_match: min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
             
         tipo_bruto = "alfanumerico"
-        for t in ["numérico", "numerico", "num", "entero", "decimal", "texto", "letras"]:
-            if t in linea_limpia: tipo_bruto = t; break
+        # Al poner los términos alfanuméricos al principio, ganan la prioridad de evaluación
+        for t in ["alfanumerico", "alfanum", "numérico", "numerico", "num", "entero", "decimal", "texto", "letras"]:
+            if t in linea_limpia: 
+                tipo_bruto = t
+                break
             
         # --- NUEVA DETECCIÓN DE CATÁLOGO ---
         # Usamos limpiar_texto para atrapar "catálogo", "catalogo", "CATÁLOGO", etc.
@@ -455,12 +465,39 @@ try:
     
     modelo_final = '8200' if '8200' in modelo_solicitado else '8000'
     
+    # --- LÓGICA DE TIPO DE CONTEO ---
+    if es_pieza and es_volumen:
+        txt_conteo = "Ambos (Pieza x Pieza y Volumen)"
+    elif es_pieza:
+        txt_conteo = "Pieza x Pieza"
+    elif es_volumen:
+        txt_conteo = "Volumen"
+    else:
+        txt_conteo = "No definido"
+
     print("\n" + "="*55)
     print("📋 RESUMEN DE LA SOLICITUD A INYECTAR")
     print("="*55)
     print(f"➤ Modelo de AGX  : {modelo_final}")
     print(f"➤ Pedido por     : {solicitante}")
     print(f"➤ Inventario para: {cliente}")
+    print(f"➤ Tipo de Conteo : {txt_conteo}")
+    
+    # --- LÓGICA DE ORDEN DE LOCALIZACIONES ---
+    if len(loc_items) == 2:
+        # Mapeamos la respuesta exacta del formulario basándonos en la lógica ya procesada
+        if not regla_separar:
+            txt_loc = "c. Registrar ambos en la misma pantalla."
+        elif es_primero_ubicacion:
+            txt_loc = "b. Primero registrar Ubicación y en la pantalla siguiente Marbetes."
+        else:
+            txt_loc = "a. Primero registrar Marbete y en la pantalla siguiente Ubicación."
+            
+        print(f"➤ Prioridad elegida: {txt_loc}")
+        
+    elif len(loc_items) == 1:
+        print(f"➤ Localizaciones : Solo {loc_items[0]['nombre_pantalla']}")
+        
     print("➤ Datos interpretados por el bot:")
     
     todas_las_variables = loc_items + list(dict_captura.values())
@@ -469,20 +506,24 @@ try:
         
     for var in todas_las_variables:
         if var is not None:
-            # --- NUEVO: Indicador visual dinámico para el Catálogo ---
             indicativo_lookup = " <- 2nd Lookup File" if var.get('es_catalogo') else ""
-            print(f"   • {var['nombre_pantalla']} (Longitud: {var['longitud']}){indicativo_lookup}")
+            tipo_dato = str(var.get('tipo', 'alphameric')).upper() 
+            
+            print(f"   • {var['nombre_pantalla']} (Tipo: {tipo_dato} | Longitud: {var['longitud']}){indicativo_lookup}")
     
     print("="*55)
-    
+        
     # Pausa de seguridad que detiene el código hasta que respondas
     respuesta = input("\n¿Comenzamos? (s/n): ").strip().lower()
     if respuesta != 's':
         print("\n🛑 Proceso abortado por el usuario. Saliendo del sistema...")
         sys.exit()
 
+# 👇 ESTE ES EL PARACAÍDAS QUE TE FALTA O QUE SE BORRÓ
 except Exception as e:
-    print(f"❌ Error en la curación de datos: {e}"); sys.exit()
+    print(f"❌ Error en la curación de datos: {e}")
+    sys.exit()
+
 
 # =========================================================
 # 3. EL CEREBRO DE EJECUCIÓN PROCEDURAL (FASE 3)
