@@ -299,7 +299,8 @@ ruta_excel = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\SO
 
 TRADUCCION_TIPOS = {
     "num": "integer", "numerico": "integer", "entero": "integer", "decimal": "real",
-    "alfanum": "alphameric", "alfanumerico": "alphameric", "texto": "text", "letras": "letter"
+    "alfanum": "alphameric", "alfanumerico": "alphameric", "texto": "text", "letras": "letter",
+    "lookup": "lookup" # <--- NUEVA CLAVE
 }
 
 # Inicializamos la variable global para que las funciones de la Fase 1 no arrojen error
@@ -365,6 +366,8 @@ try:
             nombre_original = "Caducidad"
         elif "numero de caja" in limpiar_texto(nombre_original):
             nombre_original = "Caja"
+        elif "ean" in limpiar_texto(nombre_original):
+            nombre_original = "EAN" # Forzamos mayúsculas para la pantalla
             
         nombre_logico = limpiar_texto(nombre_original)
         
@@ -381,16 +384,27 @@ try:
             num_match = re.search(r'\b(\d+)\b', linea_limpia)
             if num_match: min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
             
-        tipo_bruto = "alfanumerico"
-        # Al poner los términos alfanuméricos al principio, ganan la prioridad de evaluación
-        for t in ["alfanumerico", "alfanum", "numérico", "numerico", "num", "entero", "decimal", "texto", "letras"]:
+        # --- DETECCIÓN DE TIPO DE DATO BASE ---
+        tipo_bruto = "texto" # <--- 1. NUEVO VALOR POR DEFECTO (Antes era "alfanumerico")
+        
+        # Añadimos "lookup" a la lista de escaneo
+        for t in ["alfanumerico", "alfanum", "numérico", "numerico", "num", "entero", "decimal", "texto", "letras", "lookup"]:
             if t in linea_limpia: 
-                tipo_bruto = t
+                tipo_bruto = "texto" if t in ["alfanumerico", "alfanum"] else t
                 break
-            
+                
+        # --- REGLAS ESTRICTAS DE OPERACIÓN ---
+        if "sku" in nombre_logico or "ubicacion" in nombre_logico:
+            # 3. SKU Y UBICACIÓN SIEMPRE TEXTO:
+            tipo_bruto = "texto" 
+        elif "marbete" in nombre_logico:
+            # 4. MARBETE NORMALMENTE ENTERO (A menos que hayan escrito "texto" explícitamente en el excel)
+            if "texto" not in linea_limpia and "letras" not in linea_limpia:
+                tipo_bruto = "entero"
+                
         # --- NUEVA DETECCIÓN DE CATÁLOGO ---
-        # Usamos limpiar_texto para atrapar "catálogo", "catalogo", "CATÁLOGO", etc.
-        es_catalogo = "catalogo" in limpiar_texto(linea) 
+        # Se activa si dice "catálogo" o si dice "lookup"
+        es_catalogo = "catalogo" in limpiar_texto(linea) or "lookup" in linea_limpia 
         
         # Agregamos la etiqueta al diccionario de la variable
         datos = {
@@ -463,6 +477,9 @@ try:
 # =========================================================
     solicitante = str(solicitud.get('NOMBRE DE QUIEN SOLICITA EL AGX', 'No especificado')).strip()
     
+    # --- NUEVA EXTRACCIÓN: TIPO DE AGX ---
+    tipo_agx = str(solicitud.get('¿DE QUÉ TIPO SERÁ?', 'No especificado')).strip()
+    
     modelo_final = '8200' if '8200' in modelo_solicitado else '8000'
     
     # --- LÓGICA DE TIPO DE CONTEO ---
@@ -479,6 +496,7 @@ try:
     print("📋 RESUMEN DE LA SOLICITUD A INYECTAR")
     print("="*55)
     print(f"➤ Modelo de AGX  : {modelo_final}")
+    print(f"➤ Tipo de AGX    : {tipo_agx}") # <--- ¡Aquí se imprime la nueva columna!
     print(f"➤ Pedido por     : {solicitante}")
     print(f"➤ Inventario para: {cliente}")
     print(f"➤ Tipo de Conteo : {txt_conteo}")
