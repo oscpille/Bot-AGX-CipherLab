@@ -153,12 +153,13 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
         
     # 3. Longitudes
-    if min_len:
-        pyautogui.click(columnas["min_length"], y_actual); time.sleep(0.05)
-        pyautogui.write(min_len, interval=0.02)
-    if max_len:
-        pyautogui.click(columnas["max_length"], y_actual); time.sleep(0.05)
-        pyautogui.write(max_len, interval=0.02)
+    if data_type.lower() != "lookup":
+        if min_len:
+            pyautogui.click(columnas["min_length"], y_actual); time.sleep(0.05)
+            pyautogui.write(min_len, interval=0.02)
+        if max_len:
+            pyautogui.click(columnas["max_length"], y_actual); time.sleep(0.05)
+            pyautogui.write(max_len, interval=0.02)
         
     # 4. Asignación de Fields
     if num_fields > 0:
@@ -395,11 +396,15 @@ try:
                 
         # --- REGLAS ESTRICTAS DE OPERACIÓN ---
         if "sku" in nombre_logico or "ubicacion" in nombre_logico:
-            # 3. SKU Y UBICACIÓN SIEMPRE TEXTO:
             tipo_bruto = "texto" 
         elif "marbete" in nombre_logico:
-            # 4. MARBETE NORMALMENTE ENTERO (A menos que hayan escrito "texto" explícitamente en el excel)
             if "texto" not in linea_limpia and "letras" not in linea_limpia:
+                tipo_bruto = "entero"
+        # NUEVO BLINDAJE PARA CANTIDAD Y DECIMALES:
+        elif "cant" in nombre_logico:
+            if "decim" in linea_limpia: # Atrapa "decimal", "decimales" y "CantDecim"
+                tipo_bruto = "decimal"
+            else:
                 tipo_bruto = "entero"
                 
         # --- NUEVA DETECCIÓN DE CATÁLOGO ---
