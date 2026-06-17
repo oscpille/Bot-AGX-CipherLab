@@ -33,7 +33,7 @@ def inyectar_texto_en_grid(texto_a_ingresar):
     grid = MAPA_UI["vista_more"]["grid_ascii"]
     
     pyautogui.click(grid["btn_clear"])
-    time.sleep(0.08)
+    time.sleep(0.04)
     
     for caracter in str(texto_a_ingresar):
         ascii_val = ord(caracter)
@@ -47,7 +47,7 @@ def inyectar_texto_en_grid(texto_a_ingresar):
         time.sleep(0.03)
         
     pyautogui.click(grid["btn_ok"])
-    time.sleep(0.13)
+    time.sleep(0.09)
 
 def configurar_boton_more(row_idx, data_type, prefix_text="", input_mark_char=""):
     """Detecta el formato de la fila y configura prefijos (Grid ASCII) y marcas de entrada (Teclado directo)."""
@@ -61,41 +61,41 @@ def configurar_boton_more(row_idx, data_type, prefix_text="", input_mark_char=""
         
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
     pyautogui.click(MAPA_UI["vista_more"]["columna_more_x"], y_actual)
-    time.sleep(0.38) 
+    time.sleep(0.26) 
     
     if data_type in formatos["formato_1"]:
         if prefix_text:
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_prefix"])
-            time.sleep(0.08)
+            time.sleep(0.04)
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_prefix"])
-            time.sleep(0.28) 
+            time.sleep(0.24) 
             inyectar_texto_en_grid(prefix_text)
             
         if input_mark_char:
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["check_input_mark"])
-            time.sleep(0.08)
+            time.sleep(0.04)
             pyautogui.click(MAPA_UI["vista_more"]["formato_1"]["campo_input_mark"])
-            time.sleep(0.08) 
+            time.sleep(0.04) 
             
             pyautogui.write(input_mark_char, interval=0.02)
-            time.sleep(0.08)
+            time.sleep(0.04)
             
     elif data_type in formatos["formato_2"]:
         pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_save_field"])
-        time.sleep(0.08)
+        time.sleep(0.04)
         if prefix_text:
             pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["check_prefix"])
-            time.sleep(0.08)
+            time.sleep(0.04)
             pyautogui.click(MAPA_UI["vista_more"]["formato_2"]["campo_prefix"])
-            time.sleep(0.28)
+            time.sleep(0.24)
             inyectar_texto_en_grid(prefix_text)
             
     elif data_type in formatos["formato_3"]:
         pyautogui.click(MAPA_UI["vista_more"]["formato_3"]["check_show_time"])
-        time.sleep(0.08)
+        time.sleep(0.04)
         
     pyautogui.press('enter') 
-    time.sleep(0.08)
+    time.sleep(0.04)
 
 def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None, input_mark_char=""):
     """Escribe velozmente un renglón, usa portapapeles y configura el botón More."""
@@ -128,19 +128,19 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         
     if num_fields > 0:
         pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.03)
-        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.08)
+        pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.04)
         
-        pyautogui.press('n'); time.sleep(0.13) 
+        pyautogui.press('n'); time.sleep(0.09) 
         
         es_8200 = "scroll_tabla" in MAPA_UI.get("vista_form", {})
         
         for iteracion in range(num_fields):
             pyautogui.press('f')
-            time.sleep(0.13)
+            time.sleep(0.09)
             
             if es_8200 and iteracion == 0:
                 pyautogui.press('enter')
-                time.sleep(0.13)
+                time.sleep(0.09)
                 
         pyautogui.press('enter'); time.sleep(0.03) 
 
@@ -150,17 +150,17 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
 def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
     """Entra a la pantalla de Login, configura Properties y dibuja el Formato Visual."""
     pyautogui.click(form_coords)
-    time.sleep(0.73)
+    time.sleep(0.49)
     
     configurar_propiedades_form("menu 2", next_form_id, "pass_down")
     
     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
-    time.sleep(0.18)
+    time.sleep(0.14)
     
     if "scroll_tabla" in MAPA_UI["vista_form"]:
         pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
         pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left')
-        time.sleep(0.18)
+        time.sleep(0.14)
         
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
@@ -188,36 +188,36 @@ def configurar_propiedades_form(esc_id, next_id, record_tipo):
                 pyautogui.press('m')
                 time.sleep(0.03)
         pyautogui.press('enter')
-        time.sleep(0.08)
+        time.sleep(0.04)
 
-    pyautogui.click(props["esc"]["coords"]); time.sleep(0.08)
+    pyautogui.click(props["esc"]["coords"]); time.sleep(0.04)
     aplicar_atajo(esc_id)
     
-    pyautogui.click(props["next"]["coords"]); time.sleep(0.08)
+    pyautogui.click(props["next"]["coords"]); time.sleep(0.04)
     aplicar_atajo(next_id)
     
-    pyautogui.click(props["record"]["coords"]); time.sleep(0.08)
-    pyautogui.press('p'); time.sleep(0.08)
+    pyautogui.click(props["record"]["coords"]); time.sleep(0.04)
+    pyautogui.press('p'); time.sleep(0.04)
     
     if record_tipo == 'save':
         for _ in range(4):
             pyautogui.press('s')
             time.sleep(0.03)
     pyautogui.press('enter')
-    time.sleep(0.08)
+    time.sleep(0.04)
 
 def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_texto):
     """Dibuja dinámicamente las pantallas de localización (1 sola o separadas)."""
     if route_dict.get('loc2') and len(loc_items_list) == 2:
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.48)
+        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.26)
         configurar_propiedades_form(route_dict['login'], route_dict['loc2'], "pass_down")
         
         if loc_items_list[0].get('es_catalogo'):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.08)
+            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
             
         if "scroll_tabla" in MAPA_UI["vista_form"]:
             pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.18)
+            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
             
         escribir_celda(0, "prompt", "LOCALIZACION 1/2")
         escribir_celda(1, "nil", "")
@@ -230,15 +230,15 @@ def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_text
         escribir_celda(6, "prompt", "TIPO DE CONTEO:")
         escribir_celda(7, "prompt", tipo_conteo_texto)
         
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc2']}"]); time.sleep(0.48)
+        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc2']}"]); time.sleep(0.26)
         configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0], "pass_down")
         
         if loc_items_list[1].get('es_catalogo'):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.08)
+            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
             
         if "scroll_tabla" in MAPA_UI["vista_form"]:
             pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.18)
+            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
             
         escribir_celda(0, "prompt", "LOCALIZACION 2/2")
         escribir_celda(1, "nil", "")
@@ -253,15 +253,15 @@ def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_text
         return route_dict['loc2']
         
     else:
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.48)
+        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.26)
         configurar_propiedades_form(route_dict['login'], route_dict['datos'][0], "pass_down")
         
         if any(item.get('es_catalogo') for item in loc_items_list):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.08)
+            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
             
         if "scroll_tabla" in MAPA_UI["vista_form"]:
             pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.18)
+            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
             
         escribir_celda(0, "prompt", "LOCALIZACION 1/1")
         escribir_celda(1, "nil", "")
@@ -300,18 +300,18 @@ def abrir_programa_y_plantilla(modelo):
 
     print(f"➤ Abriendo software ForgeAG ({modelo})...")
     os.startfile(lnk_path)
-    time.sleep(3.8) 
+    time.sleep(2.26) 
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
-    time.sleep(0.28)
+    time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(0.9) 
+    time.sleep(0.66) 
     
     pyautogui.write(plantilla_path)
-    time.sleep(0.48)
+    time.sleep(0.26)
     pyautogui.press('enter')
-    time.sleep(1.8) 
+    time.sleep(1.56) 
 
 def guardar_trabajo_final(modelo, cliente):
     """Guarda el archivo AGX con el formato [Cliente] [Fecha] [Version].AGX en la carpeta del modelo."""
@@ -336,18 +336,18 @@ def guardar_trabajo_final(modelo, cliente):
     print(f"➤ Guardando trabajo final como: {nombre_archivo} en {folder_name}...")
     
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
-    time.sleep(0.28)
+    time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["save_as"])
-    time.sleep(0.9) 
+    time.sleep(0.66) 
     
     pyautogui.write(full_save_path)
-    time.sleep(0.48)
+    time.sleep(0.26)
     pyautogui.press('enter')
-    time.sleep(1.3)
+    time.sleep(0.56)
     
     pyautogui.press('left') 
     pyautogui.press('enter')
-    time.sleep(0.9)
+    time.sleep(0.66)
 
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
@@ -370,14 +370,14 @@ def ejecutar_bot(datos):
     try:
         if es_8200:
             print("\n➤ Entorno 8200: Desplegando Menu, Lookup y Form simultáneamente...")
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.28)
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.28)
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.28)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.24)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.24)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.24)
         else:
             print("\n➤ Entorno 8000: Desplegando solo Menu...")
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.48)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
 
-        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.73)
+        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.49)
         
         lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
         coords_items = [MAPA_UI["vista_menu"]["items"]["item_5"]["coords"], MAPA_UI["vista_menu"]["items"]["item_6"]["coords"], MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]]
@@ -386,14 +386,14 @@ def ejecutar_bot(datos):
         for i in range(min(len(lineas_cliente), 3)):
             pyautogui.click(coords_items[i]); time.sleep(0.03)
             pyautogui.write(lineas_cliente[i], interval=0.03)
-            pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.18)
+            pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.14)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('enter'); time.sleep(0.03)
 
         print("➤ Configurando Menu 2 (Tipos de Conteo)...")
         pyautogui.click(MAPA_UI["vista_menu"]["menu_2"])
-        time.sleep(0.73) 
+        time.sleep(0.49) 
 
         coords_item1 = MAPA_UI["vista_menu"]["items"]["item_1"]["coords"]
         coords_item2 = MAPA_UI["vista_menu"]["items"]["item_2"]["coords"]
@@ -402,12 +402,12 @@ def ejecutar_bot(datos):
 
         def seleccionar_form_dropdown(coordenada_next, num_form):
             pyautogui.click(coordenada_next)
-            time.sleep(0.08)
+            time.sleep(0.04)
             for _ in range(num_form):
                 pyautogui.press('f')
                 time.sleep(0.03)
             pyautogui.press('enter')
-            time.sleep(0.08)
+            time.sleep(0.04)
 
         if es_pieza and es_volumen:
             pyautogui.click(coords_item1); time.sleep(0.03)
@@ -430,17 +430,17 @@ def ejecutar_bot(datos):
             pyautogui.press('delete'); pyautogui.press('enter')
 
         if not es_8200:
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.38)
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.38)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.26)
         
-        pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"]); time.sleep(0.48)
+        pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"]); time.sleep(0.26)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write('10', interval=0.02)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"]); pyautogui.write('10', interval=0.02)
-        pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.48)
+        pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_catalogo), interval=0.02)
 
         if not es_8200:
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.38)
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.26)
             
         if es_pieza:
             p_route = plan_vuelo['pieza']
@@ -450,7 +450,7 @@ def ejecutar_bot(datos):
             total_pags_p = len(p_route['datos'])
             p_idx_global = 0
             for idx, f_num in enumerate(p_route['datos']):
-                pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.48)
+                pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.26)
                 es_ultima = (idx == total_pags_p - 1)
                 capacidad = 5 if es_ultima else 6
                 rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
@@ -459,12 +459,12 @@ def ejecutar_bot(datos):
                 p_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(p_esc, p_next, p_record)
                 if any(v.get('es_catalogo') for v in rebanada):
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.08)
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
                 if es_ultima:
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.08)
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.04)
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-                    pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.18)
+                    pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
                 escribir_celda(0, "prompt", f"DATOS PZxPZ {idx+1}/{total_pags_p}")
                 p_idx_global += len(rebanada) 
                 for r_idx, v_info in enumerate(rebanada):
@@ -486,7 +486,7 @@ def ejecutar_bot(datos):
             total_pags_v = len(v_route['datos'])
             v_idx_global = 0
             for idx, f_num in enumerate(v_route['datos']):
-                pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.48)
+                pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.26)
                 es_ultima = (idx == total_pags_v - 1)
                 capacidad = 5 if es_ultima else 6
                 rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
@@ -495,12 +495,12 @@ def ejecutar_bot(datos):
                 v_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(v_esc, v_next, v_record)
                 if any(v.get('es_catalogo') for v in rebanada):
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.08)
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
                 if es_ultima:
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.08)
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.04)
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-                    pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.18)
+                    pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
                 escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
                 v_idx_global += len(rebanada) 
                 for r_idx, v_info in enumerate(rebanada):
