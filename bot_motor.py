@@ -98,7 +98,10 @@ def configurar_boton_more(row_idx, data_type, prefix_text="", input_mark_char=""
     time.sleep(0.04)
 
 def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None, input_mark_char=""):
-    """Escribe velozmente un renglón, usa portapapeles y configura el botón More."""
+    """Escribe velozmente un renglón, usa portapapeles y configura el botón More. Ignora filas vacías (nil)."""
+    if data_type.lower() == "nil":
+        return
+
     columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
     y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][row_idx]
     
@@ -150,7 +153,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
 def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
     """Entra a la pantalla de Login, configura Properties y dibuja el Formato Visual."""
     pyautogui.click(form_coords)
-    time.sleep(0.49)
+    time.sleep(0.40)
     
     configurar_propiedades_form("menu 2", next_form_id, "pass_down")
     
@@ -300,18 +303,18 @@ def abrir_programa_y_plantilla(modelo):
 
     print(f"➤ Abriendo software ForgeAG ({modelo})...")
     os.startfile(lnk_path)
-    time.sleep(2.26) 
+    time.sleep(1.5) 
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
     time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(0.66) 
+    time.sleep(0.50) 
     
     pyautogui.write(plantilla_path)
     time.sleep(0.26)
     pyautogui.press('enter')
-    time.sleep(1.56) 
+    time.sleep(1.00) 
 
 def guardar_trabajo_final(modelo, cliente):
     """Guarda el archivo AGX con el formato [Cliente] [Fecha] [Version].AGX en la carpeta del modelo."""
@@ -338,16 +341,16 @@ def guardar_trabajo_final(modelo, cliente):
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
     time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["save_as"])
-    time.sleep(0.66) 
+    time.sleep(0.50) 
     
     pyautogui.write(full_save_path)
     time.sleep(0.26)
     pyautogui.press('enter')
-    time.sleep(0.56)
+    time.sleep(0.50)
     
     pyautogui.press('left') 
     pyautogui.press('enter')
-    time.sleep(0.66)
+    time.sleep(0.50)
 
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
@@ -377,7 +380,7 @@ def ejecutar_bot(datos):
             print("\n➤ Entorno 8000: Desplegando solo Menu...")
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
 
-        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.49)
+        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.40)
         
         lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
         coords_items = [MAPA_UI["vista_menu"]["items"]["item_5"]["coords"], MAPA_UI["vista_menu"]["items"]["item_6"]["coords"], MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]]
@@ -393,7 +396,7 @@ def ejecutar_bot(datos):
 
         print("➤ Configurando Menu 2 (Tipos de Conteo)...")
         pyautogui.click(MAPA_UI["vista_menu"]["menu_2"])
-        time.sleep(0.49) 
+        time.sleep(0.40) 
 
         coords_item1 = MAPA_UI["vista_menu"]["items"]["item_1"]["coords"]
         coords_item2 = MAPA_UI["vista_menu"]["items"]["item_2"]["coords"]
