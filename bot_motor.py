@@ -285,6 +285,37 @@ def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_text
         escribir_celda(7, "prompt", tipo_conteo_texto)
         return route_dict['loc1']
 
+import os
+import subprocess
+
+def abrir_programa_y_plantilla(modelo):
+    """Abre el acceso directo del modelo y carga la plantilla .AGX desde File -> Open."""
+    base_path = r"C:\Users\dell\Documents\Bot AGX\AGX Bot"
+    
+    if modelo == "8200":
+        lnk_path = os.path.join(base_path, "8200 ForgeAG.exe.lnk")
+        plantilla_path = os.path.join(base_path, "8200 AGX PLANTILLA.AGX")
+    else:
+        lnk_path = os.path.join(base_path, "8000 ForgeAG.exe.lnk")
+        plantilla_path = os.path.join(base_path, "8000 AGX PLANTILLA.AGX")
+
+    print(f"➤ Abriendo software ForgeAG ({modelo})...")
+    os.startfile(lnk_path)
+    time.sleep(4) # Espera a que el programa abra
+
+    print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
+    # Ir a File -> Open
+    pyautogui.click(MAPA_UI["barra_superior"]["file"])
+    time.sleep(0.3)
+    pyautogui.click(MAPA_UI["barra_superior"]["open"])
+    time.sleep(1) # Espera a que abra la ventana de Windows Explorer
+    
+    # Escribir la ruta completa de la plantilla en el diálogo de Open
+    pyautogui.write(plantilla_path)
+    time.sleep(0.5)
+    pyautogui.press('enter')
+    time.sleep(2) # Espera a que cargue la plantilla
+
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
     es_pieza = datos['es_pieza']
@@ -297,7 +328,14 @@ def ejecutar_bot(datos):
     dict_captura = datos['dict_captura']
     listado_vars = list(dict_captura.values())
     
-    print("\n🤖 Iniciando Bot en 5 segundos. ¡Suelta el mouse y el teclado!..."); time.sleep(5)
+    # Determinar modelo
+    es_8200 = "scroll_tabla" in MAPA_UI["vista_form"]
+    modelo_str = "8200" if es_8200 else "8000"
+
+    print(f"\n🤖 Iniciando Bot AGX ({modelo_str}). ¡Suelta el mouse y el teclado!...")
+    
+    # NUEVA LÓGICA: Apertura automática
+    abrir_programa_y_plantilla(modelo_str)
 
     try:
         es_8200 = "scroll_tabla" in MAPA_UI["vista_form"]
