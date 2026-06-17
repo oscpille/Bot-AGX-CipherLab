@@ -316,21 +316,25 @@ def abrir_programa_y_plantilla(modelo):
     pyautogui.press('enter')
     time.sleep(1.00) 
 
-def guardar_trabajo_final(modelo, cliente):
-    """Guarda el archivo AGX con el formato [Cliente] [Fecha] [Version].AGX en la carpeta del modelo."""
+def guardar_trabajo_final(modelo, cliente, tipo_agx):
+    """Guarda el archivo AGX con el formato [Cliente] [Tipo] [Modelo] [Fecha] v[Version].AGX"""
     base_path = r"C:\Users\dell\Documents\Bot AGX\AGX Bot"
     folder_name = f"Modelo {modelo}"
     save_dir = os.path.join(base_path, folder_name)
     
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+        
+    # Determinar si es Abierto o Cerrado para el nombre
+    tipo_limpio = limpiar_texto(tipo_agx)
+    tipo_nombre = "Abierto" if "abierto" in tipo_limpio or "forzado" in tipo_limpio else "Cerrado"
     
     fecha_hoy = datetime.now().strftime("%d-%m-%Y")
     version = 1
     cliente_limpio = re.sub(r'[\\/*?:"<>|]', "", cliente).strip()
     
     while True:
-        nombre_archivo = f"{cliente_limpio} {fecha_hoy} V{version}.AGX"
+        nombre_archivo = f"{cliente_limpio} {tipo_nombre} {modelo} {fecha_hoy} v{version}.AGX"
         full_save_path = os.path.join(save_dir, nombre_archivo)
         if not os.path.exists(full_save_path):
             break
@@ -347,16 +351,13 @@ def guardar_trabajo_final(modelo, cliente):
     time.sleep(0.26)
     pyautogui.press('enter')
     time.sleep(0.50)
-    
-    pyautogui.press('left') 
-    pyautogui.press('enter')
-    time.sleep(0.50)
 
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
     es_pieza = datos['es_pieza']
     es_volumen = datos['es_volumen']
     cliente = datos['cliente']
+    tipo_agx = datos['tipo_agx']
     plan_vuelo = datos['plan_vuelo']
     loc_items = datos['loc_items']
     info_cantidad = datos['info_cantidad']
@@ -439,8 +440,18 @@ def ejecutar_bot(datos):
         pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["1st_lookup"]); time.sleep(0.26)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write('10', interval=0.02)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"]); pyautogui.write('10', interval=0.02)
+        
         pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_catalogo), interval=0.02)
+
+        # LÓGICA DE AGX ABIERTO/CERRADO
+        tipo_agx_limpio = limpiar_texto(tipo_agx)
+        if "abierto" in tipo_agx_limpio or "forzado" in tipo_agx_limpio:
+            print("➤ Configurando 2nd Lookup: Abierto (Show warning & insert)")
+            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
+        else:
+            print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
+            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
 
         if not es_8200:
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.26)
@@ -520,7 +531,7 @@ def ejecutar_bot(datos):
 
         # [AL FINAL DE TODA LA INYECCIÓN]
         print("\n➤ Finalizando inyección de datos...")
-        guardar_trabajo_final(modelo_str, cliente)
+        guardar_trabajo_final(modelo_str, cliente, tipo_agx)
         print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO Y GUARDADO PERFECTAMENTE!")
 
     except Exception as e:

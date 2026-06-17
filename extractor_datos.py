@@ -249,6 +249,7 @@ def procesar_fila_excel():
             'es_pieza': es_pieza,
             'es_volumen': es_volumen,
             'cliente': cliente,
+            'tipo_agx': tipo_agx,
             'plan_vuelo': plan_vuelo,
             'loc_items': loc_items,
             'info_cantidad': info_cantidad,
