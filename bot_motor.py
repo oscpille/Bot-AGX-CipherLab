@@ -30,7 +30,7 @@ def calcular_prefijo(nombre_pantalla, data_type="texto"):
     nombre_limpio = limpiar_texto(nombre_pantalla)
     
     for clave, prefijo in DICCIONARIO_PREFIJOS.items():
-        if clave in nombre_limpio:
+        if re.search(rf'\b{clave}\b', nombre_limpio):
             return prefijo + "#"
             
     # Asignación de Comodines Controlados
@@ -138,7 +138,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     
     if prompt_text:
         pyautogui.click(columnas["prompt"], y_actual); time.sleep(0.03)
-        pyperclip.copy(quitar_acentos(prompt_text)); time.sleep(0.03)
+        pyperclip.copy(quitar_acentos(prompt_text).upper()); time.sleep(0.03)
         pyautogui.hotkey('ctrl', 'v'); time.sleep(0.03)
         
     if data_type.lower() != "lookup":
@@ -188,13 +188,13 @@ def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
     
-    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="pw#", input_mark_char="*")
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="us#") 
+    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="usu#", input_mark_char="*")
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="nom#") 
     
     escribir_celda(4, "nil", "")
     escribir_celda(5, "prompt", "TIPO DE CONTEO:")
-    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="rk#")
-    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nc#")
+    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="tco#")
+    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nct#")
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""

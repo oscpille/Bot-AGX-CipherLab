@@ -136,6 +136,9 @@ def procesar_fila_excel():
                     
             es_catalogo = "catalogo" in limpiar_texto(linea) or "lookup" in linea_limpia 
             
+            if "marbete" not in nombre_logico and not es_catalogo:
+                tipo_bruto = "texto"
+            
             datos = {
                 'nombre_pantalla': nombre_original, 
                 'longitud': min_max_final, 
@@ -213,9 +216,10 @@ def procesar_fila_excel():
                 
         telefono_limpio = re.sub(r'\D', '', telefono_crudo) # Dejar solo números
         if len(telefono_limpio) == 10:
-            telefono_final = f"+52{telefono_limpio}"
+            telefono_final = f"(+52) {telefono_limpio[:2]}-{telefono_limpio[2:6]}-{telefono_limpio[6:]}"
         elif telefono_limpio.startswith('52') and len(telefono_limpio) == 12:
-            telefono_final = f"+{telefono_limpio}"
+            num = telefono_limpio[2:]
+            telefono_final = f"(+52) {num[:2]}-{num[2:6]}-{num[6:]}"
         elif telefono_limpio.startswith('+'):
             telefono_final = telefono_limpio
         else:
@@ -236,6 +240,8 @@ def procesar_fila_excel():
         print(f"➤ Modelo de AGX  : {modelo_final}")
         print(f"➤ Tipo de AGX    : {tipo_agx_mostrar}") 
         print(f"➤ Pedido por     : {solicitante}")
+        if telefono_final:
+            print(f"➤ Enviar archivos al: {telefono_final}")
         print(f"➤ Inventario para: {cliente}")
         print(f"➤ Tipo de Conteo : {txt_conteo}")
         
