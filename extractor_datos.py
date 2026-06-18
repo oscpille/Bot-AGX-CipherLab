@@ -204,6 +204,23 @@ def procesar_fila_excel():
         
         tipo_agx_mostrar = "Abierto y Cerrado" if "ambos" in limpiar_texto(tipo_agx) else tipo_agx
 
+        # Extracción y Limpieza del Teléfono para WhatsApp (Busca la llave dinámicamente para evitar problemas con espacios \xa0)
+        telefono_crudo = ""
+        for key in solicitud.keys():
+            if "TELÉFONO" in str(key):
+                telefono_crudo = str(solicitud.get(key, ''))
+                break
+                
+        telefono_limpio = re.sub(r'\D', '', telefono_crudo) # Dejar solo números
+        if len(telefono_limpio) == 10:
+            telefono_final = f"+52{telefono_limpio}"
+        elif telefono_limpio.startswith('52') and len(telefono_limpio) == 12:
+            telefono_final = f"+{telefono_limpio}"
+        elif telefono_limpio.startswith('+'):
+            telefono_final = telefono_limpio
+        else:
+            telefono_final = telefono_limpio # Dejar como esté si es internacional o ya formateado
+
         if es_pieza and es_volumen:
             txt_conteo = "Ambos (Pieza x Pieza y Volumen)"
         elif es_pieza:
@@ -252,6 +269,7 @@ def procesar_fila_excel():
             'es_volumen': es_volumen,
             'cliente': cliente,
             'tipo_agx': tipo_agx,
+            'telefono': telefono_final,
             'plan_vuelo': plan_vuelo,
             'loc_items': loc_items,
             'info_cantidad': info_cantidad,
