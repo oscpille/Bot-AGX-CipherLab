@@ -444,10 +444,17 @@ def ejecutar_bot(datos):
         pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_catalogo), interval=0.02)
 
-        # LÓGICA DE AGX ABIERTO/CERRADO
+        # LÓGICA DE AGX ABIERTO/CERRADO/AMBOS
         tipo_agx_limpio = limpiar_texto(tipo_agx)
-        if "abierto" in tipo_agx_limpio or "forzado" in tipo_agx_limpio:
-            print("➤ Configurando 2nd Lookup: Abierto (Show warning & insert)")
+        if "ambos" in tipo_agx_limpio:
+            modo_ejecucion = "ambos"
+        elif "abierto" in tipo_agx_limpio or "forzado" in tipo_agx_limpio:
+            modo_ejecucion = "abierto"
+        else:
+            modo_ejecucion = "cerrado"
+
+        if modo_ejecucion in ["abierto", "ambos"]:
+            print(f"➤ Configurando 2nd Lookup: Abierto (Show warning & insert) {'[Modo Dual Activo]' if modo_ejecucion == 'ambos' else ''}")
             pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
         else:
             print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
@@ -531,7 +538,22 @@ def ejecutar_bot(datos):
 
         # [AL FINAL DE TODA LA INYECCIÓN]
         print("\n➤ Finalizando inyección de datos...")
-        guardar_trabajo_final(modelo_str, cliente, tipo_agx)
+        
+        if modo_ejecucion == "ambos":
+            guardar_trabajo_final(modelo_str, cliente, "Abierto")
+            print("\n➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
+            
+            pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
+            
+            print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
+            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
+            
+            guardar_trabajo_final(modelo_str, cliente, "Cerrado")
+        elif modo_ejecucion == "abierto":
+            guardar_trabajo_final(modelo_str, cliente, "Abierto")
+        else:
+            guardar_trabajo_final(modelo_str, cliente, "Cerrado")
+
         print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO Y GUARDADO PERFECTAMENTE!")
 
     except Exception as e:

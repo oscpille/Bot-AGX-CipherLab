@@ -202,6 +202,8 @@ def procesar_fila_excel():
         tipo_agx = str(solicitud.get('¿DE QUÉ TIPO SERÁ?', 'No especificado')).strip()
         modelo_final = '8200' if '8200' in modelo_solicitado else '8000'
         
+        tipo_agx_mostrar = "Abierto y Cerrado" if "ambos" in limpiar_texto(tipo_agx) else tipo_agx
+
         if es_pieza and es_volumen:
             txt_conteo = "Ambos (Pieza x Pieza y Volumen)"
         elif es_pieza:
@@ -215,7 +217,7 @@ def procesar_fila_excel():
         print("📋 RESUMEN DE LA SOLICITUD A INYECTAR")
         print("="*55)
         print(f"➤ Modelo de AGX  : {modelo_final}")
-        print(f"➤ Tipo de AGX    : {tipo_agx}") 
+        print(f"➤ Tipo de AGX    : {tipo_agx_mostrar}") 
         print(f"➤ Pedido por     : {solicitante}")
         print(f"➤ Inventario para: {cliente}")
         print(f"➤ Tipo de Conteo : {txt_conteo}")
