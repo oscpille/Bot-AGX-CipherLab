@@ -13,19 +13,39 @@ def quitar_acentos(texto):
     """Filtro para PyAutoGUI y Portapapeles: Quita acentos respetando mayúsculas."""
     return unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
 
-def calcular_prefijo(nombre_pantalla):
-    """Analiza el texto de la pantalla, busca el prefijo ideal y le agrega '#'."""
+COMODINES_NUM = ["cn1#", "cn2#", "nl#"]
+COMODINES_TXT = ["ct1#", "ct2#", "al#", "pa#"]
+indice_comodines_num = 0
+indice_comodines_txt = 0
+
+def resetear_comodines():
+    """Reinicia los contadores de comodines al inicio de cada ejecución del bot."""
+    global indice_comodines_num, indice_comodines_txt
+    indice_comodines_num = 0
+    indice_comodines_txt = 0
+
+def calcular_prefijo(nombre_pantalla, data_type="texto"):
+    """Analiza el texto de la pantalla, busca el prefijo ideal o usa comodines por tipo de dato."""
+    global indice_comodines_num, indice_comodines_txt
     nombre_limpio = limpiar_texto(nombre_pantalla)
     
     for clave, prefijo in DICCIONARIO_PREFIJOS.items():
         if clave in nombre_limpio:
             return prefijo + "#"
             
-    letras = re.sub(r'[^a-z]', '', nombre_limpio)
-    if len(letras) >= 3:
-        return letras[:3] + "#"
-    elif len(letras) > 0:
-        return letras + "#"
+    # Asignación de Comodines Controlados
+    tipo_lower = str(data_type).lower()
+    if tipo_lower in ['integer', 'real', 'decimal', 'entero', 'numeric']:
+        if indice_comodines_num < len(COMODINES_NUM):
+            pref = COMODINES_NUM[indice_comodines_num]
+            indice_comodines_num += 1
+            return pref
+    else:
+        if indice_comodines_txt < len(COMODINES_TXT):
+            pref = COMODINES_TXT[indice_comodines_txt]
+            indice_comodines_txt += 1
+            return pref
+            
     return ""
 
 def inyectar_texto_en_grid(texto_a_ingresar):
@@ -147,7 +167,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
                 
         pyautogui.press('enter'); time.sleep(0.03) 
 
-    prefijo_calculado = prefijo_forzado if prefijo_forzado is not None else (calcular_prefijo(prompt_text) if prompt_text else "")
+    prefijo_calculado = prefijo_forzado if prefijo_forzado is not None else (calcular_prefijo(prompt_text, data_type) if prompt_text else "")
     configurar_boton_more(row_idx, data_type, prefijo_calculado, input_mark_char)
 
 def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
@@ -400,6 +420,7 @@ def ejecutar_bot(datos):
 
     print(f"\n🤖 Iniciando Bot AGX ({modelo_str}). ¡Suelta el mouse y el teclado!...")
     abrir_programa_y_plantilla(modelo_str)
+    resetear_comodines()
 
     try:
         if es_8200:
@@ -572,6 +593,10 @@ def ejecutar_bot(datos):
         if modo_ejecucion == "ambos":
             path_abierto = guardar_trabajo_final(modelo_str, cliente, "Abierto")
             enviar_por_whatsapp(path_abierto, telefono)
+
+            print("\n➤ Devolviendo foco a ForgeAG para la segunda fase (Alt+Tab)...")
+            pyautogui.hotkey('alt', 'tab')
+            time.sleep(0.5) # Pausa para que la ventana de ForgeAG se active
             
             print("\n➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
             pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
