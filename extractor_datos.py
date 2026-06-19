@@ -106,6 +106,7 @@ def procesar_fila_excel():
             
         solicitud = df_pendientes.iloc[0]
         indice_excel = solicitud.name + 2 
+        col_estatus = df.columns.get_loc('ESTATUS:') + 1
         print(f"➤ Atendiendo solicitud en la fila {indice_excel} de la cola de trabajo.")
         
         modelo_solicitado = str(solicitud['¿QUÉ MODELO DE AGX NECESITAS?']).strip()
@@ -353,7 +354,9 @@ def procesar_fila_excel():
             'loc_items': loc_items,
             'info_cantidad': info_cantidad,
             'multiplos_por_lookup': multiplos_por_lookup,
-            'dict_captura': dict_captura
+            'dict_captura': dict_captura,
+            'fila_excel': indice_excel,
+            'col_estatus': col_estatus
         }
 
     except Exception as e:

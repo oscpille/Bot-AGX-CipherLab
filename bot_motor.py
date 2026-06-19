@@ -412,6 +412,14 @@ def ejecutar_bot(datos):
     dict_captura = datos['dict_captura']
     listado_vars = list(dict_captura.values())
     
+    tipo_limpio = limpiar_texto(tipo_agx)
+    if "ambos" in tipo_limpio:
+        modo_ejecucion = "ambos"
+    elif "abierto" in tipo_limpio or "forzado" in tipo_limpio:
+        modo_ejecucion = "abierto"
+    else:
+        modo_ejecucion = "cerrado"
+    
     es_8200 = "scroll_tabla" in MAPA_UI["vista_form"]
     modelo_str = "8200" if es_8200 else "8000"
 
@@ -651,3 +659,4 @@ def ejecutar_bot(datos):
 
     except Exception as e:
         print(f"\n❌ El bot dinámico falló en ejecución: {e}")
+        raise
