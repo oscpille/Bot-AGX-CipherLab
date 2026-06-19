@@ -251,7 +251,7 @@ def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_text
         escribir_celda(7, "prompt", tipo_conteo_texto)
         
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc2']}"]); time.sleep(0.26)
-        configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0], "pass_down")
+        configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0]['f_num'], "pass_down")
         
         if loc_items_list[1].get('es_catalogo'):
             pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
@@ -274,7 +274,7 @@ def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_text
         
     else:
         pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.26)
-        configurar_propiedades_form(route_dict['login'], route_dict['datos'][0], "pass_down")
+        configurar_propiedades_form(route_dict['login'], route_dict['datos'][0]['f_num'], "pass_down")
         
         if any(item.get('es_catalogo') for item in loc_items_list):
             pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
@@ -326,7 +326,7 @@ def abrir_programa_y_plantilla(modelo):
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
     time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(0.50) 
+    time.sleep(0.70) 
     
     pyautogui.write(plantilla_path)
     time.sleep(0.26)
@@ -362,7 +362,7 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx):
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
     time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["save_as"])
-    time.sleep(0.50) 
+    time.sleep(0.70) 
     
     pyautogui.write(full_save_path)
     time.sleep(0.26)
@@ -394,7 +394,7 @@ def enviar_por_whatsapp(file_path, telefono, es_segundo_envio=False):
     
     print("➤ Pegando y enviando archivo...")
     pyautogui.hotkey('ctrl', 'v')
-    time.sleep(0.25)
+    time.sleep(0.45)
     pyautogui.press('enter')
     time.sleep(0.50)
 
