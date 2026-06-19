@@ -35,7 +35,7 @@ DICCIONARIO_PREFIJOS = {
     "colores": "col", "color": "col",
     # ubi, sku, est
     "ubicacion": "ubi",
-    "sku": "sku", "sk": "sku",
+    "sku": "sku", "sk": "sku", "sap": "sku",
     "estado": "est", "condicion": "est", "estatus": "est",
     # uni
     "unidades de medida": "uni", "unidad de medida": "uni", "unidades": "uni", "unidad": "uni", "medida": "uni",

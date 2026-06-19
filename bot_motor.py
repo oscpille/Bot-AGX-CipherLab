@@ -408,7 +408,7 @@ def ejecutar_bot(datos):
     plan_vuelo = datos['plan_vuelo']
     loc_items = datos['loc_items']
     info_cantidad = datos['info_cantidad']
-    multiplo_catalogo = datos['multiplo_catalogo']
+    multiplos_por_lookup = datos.get('multiplos_por_lookup', {})
     dict_captura = datos['dict_captura']
     listado_vars = list(dict_captura.values())
     
@@ -489,24 +489,43 @@ def ejecutar_bot(datos):
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write('10', interval=0.02)
         pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"]); pyautogui.write('10', interval=0.02)
         
-        pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
-        pyautogui.click(MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"]); pyautogui.write(str(multiplo_catalogo), interval=0.02)
+        for lookup_name in ['2nd_lookup', '3rd_lookup']:
+            multiplos = multiplos_por_lookup.get(lookup_name, [])
+            if multiplos:
+                pyautogui.click(MAPA_UI["vista_lookup"]["archivos"][lookup_name]); time.sleep(0.26)
+                
+                # Configurar el Number of Fields
+                num_fields_coord = MAPA_UI["vista_lookup"]["configuracion"]["number_of_fields"]["coords"]
+                pyautogui.click(num_fields_coord)
+                pyautogui.press('backspace'); pyautogui.press('backspace')
+                pyautogui.write(str(len(multiplos)), interval=0.02)
+                time.sleep(0.04)
+                
+                # Iterar y configurar el Max Length de cada campo de catálogo
+                base_y = MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"][1]
+                y_delta = MAPA_UI["vista_lookup"]["configuracion"]["max_length_2"]["coords"][1] - base_y
+                x_coord = MAPA_UI["vista_lookup"]["configuracion"]["max_length_1"]["coords"][0]
+                
+                for i, length in enumerate(multiplos):
+                    coord_y = base_y + (i * y_delta)
+                    pyautogui.click((x_coord, coord_y))
+                    pyautogui.write(str(length), interval=0.02)
 
-        # LÓGICA DE AGX ABIERTO/CERRADO/AMBOS
-        tipo_agx_limpio = limpiar_texto(tipo_agx)
-        if "ambos" in tipo_agx_limpio:
-            modo_ejecucion = "ambos"
-        elif "abierto" in tipo_agx_limpio or "forzado" in tipo_agx_limpio:
-            modo_ejecucion = "abierto"
-        else:
-            modo_ejecucion = "cerrado"
+                # LÓGICA DE AGX ABIERTO/CERRADO/AMBOS
+                tipo_agx_limpio = limpiar_texto(tipo_agx)
+                if "ambos" in tipo_agx_limpio:
+                    modo_ejecucion = "ambos"
+                elif "abierto" in tipo_agx_limpio or "forzado" in tipo_agx_limpio:
+                    modo_ejecucion = "abierto"
+                else:
+                    modo_ejecucion = "cerrado"
 
-        if modo_ejecucion in ["abierto", "ambos"]:
-            print(f"➤ Configurando 2nd Lookup: Abierto (Show warning & insert) {'[Modo Dual Activo]' if modo_ejecucion == 'ambos' else ''}")
-            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
-        else:
-            print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
-            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
+                if modo_ejecucion in ["abierto", "ambos"]:
+                    print(f"➤ Configurando {lookup_name}: Abierto (Show warning & insert) {'[Modo Dual Activo]' if modo_ejecucion == 'ambos' else ''}")
+                    pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
+                else:
+                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning)")
+                    pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
 
         if not es_8200:
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.26)
@@ -517,27 +536,36 @@ def ejecutar_bot(datos):
             configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
             esc_retorno_datos = inyectar_localizaciones_formato(p_route, loc_items, "Pieza x Pieza")
             total_pags_p = len(p_route['datos'])
-            p_idx_global = 0
-            for idx, f_num in enumerate(p_route['datos']):
+            idx_catalogo_p = 1
+            for idx, pagina_data in enumerate(p_route['datos']):
+                f_num = pagina_data['f_num']
+                l_file = pagina_data['lookup_file']
+                rebanada = pagina_data['vars']
+                
                 pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.26)
                 es_ultima = (idx == total_pags_p - 1)
-                capacidad = 5 if es_ultima else 6
-                rebanada = listado_vars[p_idx_global : p_idx_global + capacidad]
-                p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]
-                p_next = p_route['datos'][0] if es_ultima else p_route['datos'][idx + 1] 
+                
+                p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]['f_num']
+                p_next = p_route['datos'][0]['f_num'] if es_ultima else p_route['datos'][idx + 1]['f_num'] 
                 p_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(p_esc, p_next, p_record)
-                if any(v.get('es_catalogo') for v in rebanada):
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
+                
+                if l_file in ["2nd_lookup", "3rd_lookup"]:
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"][l_file]); time.sleep(0.04)
+                    
                 if es_ultima:
                     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.04)
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
                     pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
                 escribir_celda(0, "prompt", f"DATOS PZxPZ {idx+1}/{total_pags_p}")
-                p_idx_global += len(rebanada) 
+                
                 for r_idx, v_info in enumerate(rebanada):
-                    num_field = 1 if v_info.get('es_catalogo') else 0
+                    if v_info.get('es_catalogo'):
+                        num_field = idx_catalogo_p
+                        idx_catalogo_p += 1
+                    else:
+                        num_field = 0
                     escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
@@ -550,57 +578,39 @@ def ejecutar_bot(datos):
         if es_volumen:
             v_route = plan_vuelo['volumen']
             print(f"\n➤ Construyendo Interfaz Gráfica de Volumen (Inicia Form {v_route['login']})...")
-            
-            def es_prefijo_con(nombre):
-                nm = limpiar_texto(nombre)
-                for c, p in DICCIONARIO_PREFIJOS.items():
-                    if re.search(rf'\b{c}\b', nm):
-                        return p == "con"
-                return False
-                
-            listado_vars_v = []
-            for var in listado_vars:
-                if es_prefijo_con(var['nombre_pantalla']):
-                    print(f"   [Volumen] Omitiendo '{var['nombre_pantalla']}' por conflicto de prefijo 'con#'")
-                else:
-                    listado_vars_v.append(var)
-                    
-            t_vars_v = len(listado_vars_v)
-            if t_vars_v == 0:
-                paginas_v = 1
-            else:
-                paginas_v = 0
-                v_left = t_vars_v
-                while True:
-                    paginas_v += 1
-                    if v_left <= 5: break
-                    v_left -= 6
-            v_route['datos'] = v_route['datos'][:paginas_v]
-            
             configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
             esc_retorno_datos_v = inyectar_localizaciones_formato(v_route, loc_items, "Conteo x Volumen")
             total_pags_v = len(v_route['datos'])
-            v_idx_global = 0
-            for idx, f_num in enumerate(v_route['datos']):
+            idx_catalogo_v = 1
+            for idx, pagina_data in enumerate(v_route['datos']):
+                f_num = pagina_data['f_num']
+                l_file = pagina_data['lookup_file']
+                rebanada = pagina_data['vars']
+                
                 pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.26)
                 es_ultima = (idx == total_pags_v - 1)
-                capacidad = 5 if es_ultima else 6
-                rebanada = listado_vars_v[v_idx_global : v_idx_global + capacidad]
-                v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]
-                v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] 
+                
+                v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]['f_num']
+                v_next = v_route['datos'][0]['f_num'] if es_ultima else v_route['datos'][idx + 1]['f_num'] 
                 v_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(v_esc, v_next, v_record)
-                if any(v.get('es_catalogo') for v in rebanada):
-                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
+                
+                if l_file in ["2nd_lookup", "3rd_lookup"]:
+                    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"][l_file]); time.sleep(0.04)
+                    
                 if es_ultima:
                     pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["date_time_stamp"]["append_end"]); time.sleep(0.04)
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
                     pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
                 escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
-                v_idx_global += len(rebanada) 
+                
                 for r_idx, v_info in enumerate(rebanada):
-                    num_field = 1 if v_info.get('es_catalogo') else 0
+                    if v_info.get('es_catalogo'):
+                        num_field = idx_catalogo_v
+                        idx_catalogo_v += 1
+                    else:
+                        num_field = 0
                     escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
