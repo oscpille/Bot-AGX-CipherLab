@@ -370,33 +370,7 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx):
     time.sleep(0.50)
     return full_save_path
 
-def enviar_por_whatsapp(file_path, telefono, es_segundo_envio=False):
-    """Copia nativamente el archivo físico al portapapeles mediante PowerShell y lo envía por WhatsApp Desktop."""
-    if not telefono or len(telefono) < 8:
-        print("⚠️ No se proporcionó un número de teléfono válido para el envío por WhatsApp.")
-        return
-
-    print(f"➤ Preparando archivo para WhatsApp: {os.path.basename(file_path)}")
-    import subprocess
-    
-    # Comando nativo de PowerShell para meter un objeto ARCHIVO FÍSICO en el portapapeles de Windows (idéntico a Ctrl+C en el explorador)
-    ps_cmd = f"Set-Clipboard -Path '{file_path}'"
-    subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(0.15)
-    
-    print(f"➤ Abriendo chat de WhatsApp para el número: {telefono}...")
-    # Protocolo nativo de Windows URI que enfoca o abre WhatsApp Desktop en un chat específico
-    os.startfile(f"whatsapp://send?phone={telefono}")
-    
-    # Tiempo de carga: el primer envío necesita más tiempo por si la app está cerrada; el segundo es casi instantáneo
-    tiempo_espera = 1.50 if es_segundo_envio else 3.50
-    time.sleep(tiempo_espera)
-    
-    print("➤ Pegando y enviando archivo...")
-    pyautogui.hotkey('ctrl', 'v')
-    time.sleep(0.45)
-    pyautogui.press('enter')
-    time.sleep(0.50)
+# Se eliminó enviar_por_whatsapp
 
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
@@ -631,14 +605,11 @@ def ejecutar_bot(datos):
 
         # [AL FINAL DE TODA LA INYECCIÓN]
         print("\n➤ Finalizando inyección de datos...")
+        archivos_generados = []
         
         if modo_ejecucion == "ambos":
             path_abierto = guardar_trabajo_final(modelo_str, cliente, "Abierto")
-            enviar_por_whatsapp(path_abierto, telefono)
-
-            print("\n➤ Devolviendo foco a ForgeAG para la segunda fase (Alt+Tab)...")
-            pyautogui.hotkey('alt', 'tab')
-            time.sleep(0.5) # Pausa para que la ventana de ForgeAG se active
+            archivos_generados.append(path_abierto)
             
             print("\n➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
             pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
@@ -647,15 +618,16 @@ def ejecutar_bot(datos):
             pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
             
             path_cerrado = guardar_trabajo_final(modelo_str, cliente, "Cerrado")
-            enviar_por_whatsapp(path_cerrado, telefono, es_segundo_envio=True)
+            archivos_generados.append(path_cerrado)
         elif modo_ejecucion == "abierto":
             path_gen = guardar_trabajo_final(modelo_str, cliente, "Abierto")
-            enviar_por_whatsapp(path_gen, telefono)
+            archivos_generados.append(path_gen)
         else:
             path_gen = guardar_trabajo_final(modelo_str, cliente, "Cerrado")
-            enviar_por_whatsapp(path_gen, telefono)
+            archivos_generados.append(path_gen)
 
-        print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO, GUARDADO Y ENVIADO PERFECTAMENTE!")
+        print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO Y GUARDADO PERFECTAMENTE!")
+        return archivos_generados
 
     except Exception as e:
         print(f"\n❌ El bot dinámico falló en ejecución: {e}")

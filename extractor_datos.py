@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import sys
 import unicodedata
-from config import RUTA_EXCEL, TRADUCCION_TIPOS, MAPA_UI
+from config import TRADUCCION_TIPOS, MAPA_UI
 
 def limpiar_texto(texto):
     """Quita acentos y pasa a minúsculas para comparaciones exactas."""
@@ -92,24 +92,22 @@ def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen, dict_u
         
     return rutas
 
-def procesar_fila_excel():
-    """Ejecuta toda la lógica de lectura, analizador léxico y pre-vuelo."""
+def procesar_solicitud(solicitud):
+    """Ejecuta toda la lógica de analizador léxico y pre-vuelo recibiendo el JSON directo."""
     try:
-        print("➤ Iniciando lectura ultrarrápida desde OneDrive (Calamine)...")
-        df = pd.read_excel(RUTA_EXCEL, engine='calamine').dropna(how='all')
+        from config import MAPA_UI
+        import datetime
         
-        df_pendientes = df[df['ESTATUS:'].astype(str).str.strip().str.upper() == 'PENDIENTE']
+        id_solicitud = solicitud.get('id_solicitud', 'desconocido')
+        chat_id = solicitud.get('chat_id', '')
         
-        if df_pendientes.empty:
-            print("\n✅ Bandeja limpia: No hay solicitudes PENDIENTES por procesar. Cerrando...")
-            sys.exit()
+        try:
+            fecha_str = datetime.datetime.fromtimestamp(int(id_solicitud) / 1000.0).strftime('%d/%m/%Y|%H:%M:%S')
+        except ValueError:
+            fecha_str = "Fecha Desconocida"
             
-        solicitud = df_pendientes.iloc[0]
-        indice_excel = solicitud.name + 2 
-        col_estatus = df.columns.get_loc('ESTATUS:') + 1
-        print(f"➤ Atendiendo solicitud en la fila {indice_excel} de la cola de trabajo.")
-        
-        modelo_solicitado = str(solicitud['¿QUÉ MODELO DE AGX NECESITAS?']).strip()
+        print(f"➤ Analizando datos de la solicitud recibida el {fecha_str}...")
+        modelo_solicitado = str(solicitud.get('¿QUÉ MODELO DE AGX NECESITAS?', '')).strip()
         
         if "8200" in modelo_solicitado:
             print("➤ Configuración Detectada: MODELO 8200")
@@ -272,29 +270,10 @@ def procesar_fila_excel():
         # =========================================================
         # CHECKLIST DE PRE-VUELO (CONFIRMACIÓN DE DATOS)
         # =========================================================
-        solicitante = str(solicitud.get('NOMBRE DE QUIEN SOLICITA EL AGX', 'No especificado')).strip()
         tipo_agx = str(solicitud.get('¿DE QUÉ TIPO SERÁ?', 'No especificado')).strip()
         modelo_final = '8200' if '8200' in modelo_solicitado else '8000'
         
         tipo_agx_mostrar = "Abierto y Cerrado" if "ambos" in limpiar_texto(tipo_agx) else tipo_agx
-
-        # Extracción y Limpieza del Teléfono para WhatsApp (Busca la llave dinámicamente para evitar problemas con espacios \xa0)
-        telefono_crudo = ""
-        for key in solicitud.keys():
-            if "TELÉFONO" in str(key):
-                telefono_crudo = str(solicitud.get(key, ''))
-                break
-                
-        telefono_limpio = re.sub(r'\D', '', telefono_crudo) # Dejar solo números
-        if len(telefono_limpio) == 10:
-            telefono_final = f"(+52) {telefono_limpio[:2]}-{telefono_limpio[2:6]}-{telefono_limpio[6:]}"
-        elif telefono_limpio.startswith('52') and len(telefono_limpio) == 12:
-            num = telefono_limpio[2:]
-            telefono_final = f"(+52) {num[:2]}-{num[2:6]}-{num[6:]}"
-        elif telefono_limpio.startswith('+'):
-            telefono_final = telefono_limpio
-        else:
-            telefono_final = telefono_limpio # Dejar como esté si es internacional o ya formateado
 
         if es_pieza and es_volumen:
             txt_conteo = "Ambos (Pieza x Pieza y Volumen)"
@@ -310,9 +289,6 @@ def procesar_fila_excel():
         print("="*55)
         print(f"➤ Modelo de AGX  : {modelo_final}")
         print(f"➤ Tipo de AGX    : {tipo_agx_mostrar}") 
-        print(f"➤ Pedido por     : {solicitante}")
-        if telefono_final:
-            print(f"➤ Enviar archivos al: {telefono_final}")
         print(f"➤ Inventario para: {cliente}")
         print(f"➤ Tipo de Conteo : {txt_conteo}")
         
@@ -349,14 +325,13 @@ def procesar_fila_excel():
             'es_volumen': es_volumen,
             'cliente': cliente,
             'tipo_agx': tipo_agx,
-            'telefono': telefono_final,
             'plan_vuelo': plan_vuelo,
             'loc_items': loc_items,
             'info_cantidad': info_cantidad,
             'multiplos_por_lookup': multiplos_por_lookup,
             'dict_captura': dict_captura,
-            'fila_excel': indice_excel,
-            'col_estatus': col_estatus
+            'id_solicitud': id_solicitud,
+            'chat_id': chat_id
         }
 
     except Exception as e:
