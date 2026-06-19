@@ -33,19 +33,16 @@ def calcular_prefijo(nombre_pantalla, data_type="texto"):
         if re.search(rf'\b{clave}\b', nombre_limpio):
             return prefijo + "#"
             
-    # Asignación de Comodines Controlados
-    tipo_lower = str(data_type).lower()
-    if tipo_lower in ['integer', 'real', 'decimal', 'entero', 'numeric']:
-        if indice_comodines_num < len(COMODINES_NUM):
-            pref = COMODINES_NUM[indice_comodines_num]
-            indice_comodines_num += 1
-            return pref
-    else:
-        if indice_comodines_txt < len(COMODINES_TXT):
-            pref = COMODINES_TXT[indice_comodines_txt]
-            indice_comodines_txt += 1
-            return pref
-            
+    # Unificación de Comodines: Agotar TXT primero, luego NUM.
+    if indice_comodines_txt < len(COMODINES_TXT):
+        pref = COMODINES_TXT[indice_comodines_txt]
+        indice_comodines_txt += 1
+        return pref
+    elif indice_comodines_num < len(COMODINES_NUM):
+        pref = COMODINES_NUM[indice_comodines_num]
+        indice_comodines_num += 1
+        return pref
+        
     return ""
 
 def inyectar_texto_en_grid(texto_a_ingresar):
@@ -545,7 +542,7 @@ def ejecutar_bot(datos):
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     escribir_celda(6, "pause", "[ENTER] O [ESC]")
-                    escribir_celda(7, "fixed_data", "1", prefijo_forzado="cn#")
+                    escribir_celda(7, "fixed_data", "1", prefijo_forzado="con#")
                 else:
                     for v_blank in range(len(rebanada) + 1, 7): escribir_celda(v_blank, "nil", "")
                     escribir_celda(7, "pause", "[SIGUIENTE] ->")
@@ -553,6 +550,33 @@ def ejecutar_bot(datos):
         if es_volumen:
             v_route = plan_vuelo['volumen']
             print(f"\n➤ Construyendo Interfaz Gráfica de Volumen (Inicia Form {v_route['login']})...")
+            
+            def es_prefijo_con(nombre):
+                nm = limpiar_texto(nombre)
+                for c, p in DICCIONARIO_PREFIJOS.items():
+                    if re.search(rf'\b{c}\b', nm):
+                        return p == "con"
+                return False
+                
+            listado_vars_v = []
+            for var in listado_vars:
+                if es_prefijo_con(var['nombre_pantalla']):
+                    print(f"   [Volumen] Omitiendo '{var['nombre_pantalla']}' por conflicto de prefijo 'con#'")
+                else:
+                    listado_vars_v.append(var)
+                    
+            t_vars_v = len(listado_vars_v)
+            if t_vars_v == 0:
+                paginas_v = 1
+            else:
+                paginas_v = 0
+                v_left = t_vars_v
+                while True:
+                    paginas_v += 1
+                    if v_left <= 5: break
+                    v_left -= 6
+            v_route['datos'] = v_route['datos'][:paginas_v]
+            
             configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
             esc_retorno_datos_v = inyectar_localizaciones_formato(v_route, loc_items, "Conteo x Volumen")
             total_pags_v = len(v_route['datos'])
@@ -561,7 +585,7 @@ def ejecutar_bot(datos):
                 pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{f_num}"]); time.sleep(0.26)
                 es_ultima = (idx == total_pags_v - 1)
                 capacidad = 5 if es_ultima else 6
-                rebanada = listado_vars[v_idx_global : v_idx_global + capacidad]
+                rebanada = listado_vars_v[v_idx_global : v_idx_global + capacidad]
                 v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]
                 v_next = v_route['datos'][0] if es_ultima else v_route['datos'][idx + 1] 
                 v_record = "save" if es_ultima else "pass_down"

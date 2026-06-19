@@ -265,8 +265,7 @@ def procesar_fila_excel():
         for var in todas_las_variables:
             if var is not None:
                 indicativo_lookup = " <- 2nd Lookup File" if var.get('es_catalogo') else ""
-                tipo_dato = str(var.get('tipo', 'alphameric')).upper() 
-                print(f"   • {var['nombre_pantalla']} (Tipo: {tipo_dato} | Longitud: {var['longitud']}){indicativo_lookup}")
+                print(f"   • {var['nombre_pantalla']}: {var['longitud']}{indicativo_lookup}")
         
         print("="*55)
 
