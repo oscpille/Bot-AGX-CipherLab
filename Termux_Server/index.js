@@ -88,38 +88,57 @@ client.on('ready', () => {
 
 client.on('message', async msg => {
     const chat = await msg.getChat();
-    // Evitar grupos por seguridad
-    if (chat.isGroup) return;
 
     // Evitar respuestas de sí mismo
     if (msg.fromMe) return;
 
     const body = msg.body.trim();
     const bodyLower = body.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const from = msg.from;
+    
+    // Si viene de un grupo, msg.author tiene el ID del usuario. Si es privado, msg.from tiene el ID del usuario.
+    const user_id = msg.author || msg.from;
+    const from_chat = msg.from; // El chat original donde se recibió el mensaje (grupo o privado)
 
     // Comando de inicio (más flexible)
     const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx'];
     if (triggerWords.includes(bodyLower)) {
-        sessions[from] = { step: 0, answers: {} };
-        await client.sendMessage(from, '🤖 *¡Hola! Bienvenido al creador de Solicitudes AGX.*\nTe haré unas preguntas rápidas.\n_(Escribe *Regresar* en cualquier momento para corregir, o *Cancelar* para abortar)_');
-        await client.sendMessage(from, PREGUNTAS[0].msg);
+        if (chat.isGroup) {
+            // Etiquetar al usuario en el grupo usando su ID directamente
+            await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`, {
+                mentions: [user_id]
+            });
+        }
+        
+        // Guardar sesión usando el ID privado del usuario, guardando el origen para la entrega final
+        sessions[user_id] = { 
+            step: 0, 
+            answers: {}, 
+            chat_id: from_chat, 
+            mention_id: chat.isGroup ? user_id : null 
+        };
+        
+        await client.sendMessage(user_id, '🤖 *¡Hola! Bienvenido al creador de Solicitudes AGX.*\nTe haré unas preguntas rápidas.\n_(Escribe *Regresar* en cualquier momento para corregir, o *Cancelar* para abortar)_');
+        await client.sendMessage(user_id, PREGUNTAS[0].msg);
         return;
     }
 
-    // Si el usuario tiene una sesión activa (está en medio del formulario)
-    if (sessions[from]) {
-        const session = sessions[from];
+    // El cuestionario siempre transcurre en el chat privado (donde from_chat === user_id)
+    // Si el mensaje viene de un grupo (from_chat != user_id), lo ignoramos para el flujo del formulario
+    if (chat.isGroup) return;
+
+    // Si el usuario tiene una sesión activa (está en medio del formulario en su chat privado)
+    if (sessions[user_id]) {
+        const session = sessions[user_id];
         
         if (bodyLower === 'cancelar') {
-            delete sessions[from];
-            await client.sendMessage(from, '🛑 Formulario cancelado.');
+            delete sessions[user_id];
+            await client.sendMessage(user_id, '🛑 Formulario cancelado.');
             return;
         }
         
         if (bodyLower === 'regresar') {
             if (session.step === 0) {
-                await client.sendMessage(from, '⚠️ Ya estás en la primera pregunta. Si deseas salir, escribe *Cancelar*.');
+                await client.sendMessage(user_id, '⚠️ Ya estás en la primera pregunta. Si deseas salir, escribe *Cancelar*.');
                 return;
             } else {
                 session.step -= 1;
@@ -127,7 +146,7 @@ client.on('message', async msg => {
                 if (session.step === 5 && session.answers['MARBETE Y UBICACIÓN'] !== 'Ambos') {
                     session.step -= 1; 
                 }
-                await client.sendMessage(from, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
+                await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
                 return;
             }
         }
@@ -140,32 +159,32 @@ client.on('message', async msg => {
         if (qKey === '¿QUÉ MODELO DE AGX NECESITAS?') {
             if (body === '1') bodyParsed = '8000';
             else if (body === '2') bodyParsed = '8200';
-            else { await client.sendMessage(from, '⚠️ Responde solo con 1 o 2.'); return; }
+            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1 o 2.'); return; }
         }
         else if (qKey === '¿DE QUÉ TIPO SERÁ?') {
             if (body === '1') bodyParsed = 'Abierto';
             else if (body === '2') bodyParsed = 'Cerrado';
             else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(from, '⚠️ Responde solo con 1, 2 o 3.'); return; }
+            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
         }
         else if (qKey === 'FLUJO OPERATIVO:') {
             if (body === '1') bodyParsed = 'Pieza x Pieza';
             else if (body === '2') bodyParsed = 'Volumen'; 
             else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(from, '⚠️ Responde solo con 1, 2 o 3.'); return; }
+            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
         }
         else if (qKey === 'MARBETE Y UBICACIÓN') {
             if (body === '1') bodyParsed = 'Solo Marbete';
             else if (body === '2') bodyParsed = 'Solo Ubicación';
             else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(from, '⚠️ Responde solo con 1, 2 o 3.'); return; }
+            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
         }
         else if (qKey === '¿QUÉ NIVEL DE PRIORIDAD DAREMOS?') {
             const low = body.toLowerCase();
             if (low === 'a') bodyParsed = 'Primero registrar Marbete y en la pantalla siguiente Ubicación.';
             else if (low === 'b') bodyParsed = 'Primero registrar Ubicación y en la pantalla siguiente Marbetes.';
             else if (low === 'c') bodyParsed = 'Registrar ambos en la misma pantalla.';
-            else { await client.sendMessage(from, '⚠️ Responde solo con a, b o c.'); return; }
+            else { await client.sendMessage(user_id, '⚠️ Responde solo con a, b o c.'); return; }
         }
 
         // Guardar la respuesta actual
@@ -184,12 +203,13 @@ client.on('message', async msg => {
 
         if (session.step < PREGUNTAS.length) {
             // Mandar siguiente pregunta
-            await client.sendMessage(from, PREGUNTAS[session.step].msg);
+            await client.sendMessage(user_id, PREGUNTAS[session.step].msg);
         } else {
             // Finalizó el formulario
             session.answers['ESTATUS:'] = 'PENDIENTE';
             session.answers['id_solicitud'] = Date.now().toString();
-            session.answers['chat_id'] = from; // Fundamental para envío silencioso posterior
+            session.answers['chat_id'] = session.chat_id; // Fundamental para envío silencioso posterior
+            session.answers['mention_id'] = session.mention_id;
 
             // Guardar en queue.json
             const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
@@ -197,13 +217,13 @@ client.on('message', async msg => {
             fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
 
             // Respuesta final
-            await client.sendMessage(from, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
+            await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
             
             const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
             console.log(`➤ Nueva solicitud enfilada (Inventario: ${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}) [${fechaStr}]`);
 
             // Limpiar sesión
-            delete sessions[from];
+            delete sessions[user_id];
         }
     }
 });
@@ -224,14 +244,23 @@ app.get('/queue', (req, res) => {
 const { MessageMedia } = require('whatsapp-web.js');
 
 app.post('/queue/complete', async (req, res) => {
-    const { id_solicitud, chat_id, file_base64, file_name } = req.body;
+    const { id_solicitud, chat_id, mention_id, file_base64, file_name } = req.body;
     let queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
     
     // Enviar el archivo de vuelta a WhatsApp si viene adjunto
     if (file_base64 && chat_id) {
         try {
             const media = new MessageMedia('application/octet-stream', file_base64, file_name || 'AGX_Generado.agx');
-            await client.sendMessage(chat_id, '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:');
+            
+            let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
+            let options = {};
+            
+            if (mention_id) {
+                msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
+                options.mentions = [mention_id];
+            }
+            
+            await client.sendMessage(chat_id, msgText, options);
             await client.sendMessage(chat_id, media);
             console.log(`📤 Archivo enviado silenciosamente al chat: ${chat_id}`);
         } catch (err) {

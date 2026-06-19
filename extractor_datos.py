@@ -100,6 +100,7 @@ def procesar_solicitud(solicitud):
         
         id_solicitud = solicitud.get('id_solicitud', 'desconocido')
         chat_id = solicitud.get('chat_id', '')
+        mention_id = solicitud.get('mention_id', None)
         
         try:
             fecha_str = datetime.datetime.fromtimestamp(int(id_solicitud) / 1000.0).strftime('%d/%m/%Y|%H:%M:%S')
@@ -331,7 +332,8 @@ def procesar_solicitud(solicitud):
             'multiplos_por_lookup': multiplos_por_lookup,
             'dict_captura': dict_captura,
             'id_solicitud': id_solicitud,
-            'chat_id': chat_id
+            'chat_id': chat_id,
+            'mention_id': mention_id
         }
 
     except Exception as e:

@@ -46,6 +46,7 @@ def main():
             
             id_solicitud = datos_extraidos['id_solicitud']
             chat_id = datos_extraidos.get('chat_id', '')
+            mention_id = datos_extraidos.get('mention_id', None)
             
             print(f"\n➤ Avisando al servidor Termux para borrar solicitud ID: {id_solicitud}...")
             
@@ -57,6 +58,7 @@ def main():
                 payload = {
                     "id_solicitud": id_solicitud,
                     "chat_id": chat_id,
+                    "mention_id": mention_id,
                     "file_base64": file_b64,
                     "file_name": file_name
                 }
