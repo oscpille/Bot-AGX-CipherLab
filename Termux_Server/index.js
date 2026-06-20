@@ -73,7 +73,11 @@ if (os.platform() === 'win32') {
 }
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        dataPath: (os.platform() === 'linux' || os.platform() === 'android') 
+            ? os.homedir() + '/.wwebjs_auth_bot' 
+            : './.wwebjs_auth'
+    }),
     puppeteer: puppeteerOptions
 });
 
