@@ -3,7 +3,7 @@
 # =========================================================
 
 # RUTA_EXCEL = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\SOLICITUD DE AGX.xlsx"
-TERMUX_API_URL = "http://localhost:3000" # Cámbialo por la IP real del celular en tu WiFi, ej: "http://192.168.1.75:3000"
+TERMUX_API_URL = "http://192.168.3.193:3000" # Cámbialo por la IP real del celular en tu WiFi, ej: "http://192.168.1.75:3000"
 
 DICCIONARIO_PREFIJOS = {
     # fca

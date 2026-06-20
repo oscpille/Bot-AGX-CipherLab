@@ -11,10 +11,15 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const QUEUE_FILE = './queue.json';
+const HISTORIAL_FILE = './historial_agx.txt';
 
 // Inicializar queue.json si no existe
 if (!fs.existsSync(QUEUE_FILE)) {
     fs.writeFileSync(QUEUE_FILE, JSON.stringify([]));
+}
+// Crear historial si no existe
+if (!fs.existsSync(HISTORIAL_FILE)) {
+    fs.writeFileSync(HISTORIAL_FILE, "");
 }
 
 // ==========================================
@@ -180,6 +185,37 @@ client.on('message', async msg => {
                 const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
                 queueData.push(session.answers);
                 fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
+
+                // Guardar en historial_agx.txt
+                let nextId = 1;
+                if (fs.existsSync(HISTORIAL_FILE)) {
+                    const data = fs.readFileSync(HISTORIAL_FILE, 'utf8').trim().split('\n');
+                    if (data.length > 0 && data[0] !== "") {
+                        const lastLine = data[data.length - 1];
+                        const parts = lastLine.split('|');
+                        if (parts.length > 0) {
+                            const lastId = parseInt(parts[0], 10);
+                            if (!isNaN(lastId)) {
+                                nextId = lastId + 1;
+                            }
+                        }
+                    }
+                }
+                const paddedId = String(nextId).padStart(5, '0');
+                const ans = session.answers;
+                const inventario = ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:'] || '';
+                const modelo = ans['¿QUÉ MODELO DE AGX NECESITAS?'] || '';
+                const tipo = ans['¿DE QUÉ TIPO SERÁ?'] || '';
+                const conteo = ans['FLUJO OPERATIVO:'] || '';
+                const marbete = ans['MARBETE Y UBICACIÓN'] || '';
+                const prioridad = (ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || '').replace(/\n/g, ' ');
+                const datosReq = (ans['DATOS REQUERIDOS'] || '').replace(/\n/g, ' - ');
+                const phone = user_id.split('@')[0];
+                const fechaRaw = new Date();
+                const fecha = fechaRaw.toLocaleDateString('es-MX');
+                const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
+                const logLine = `${paddedId}|${fecha}|${hora}|${inventario}|${modelo}|${tipo}|${conteo}|${marbete}|${prioridad}|${datosReq}|${phone}\n`;
+                fs.appendFileSync(HISTORIAL_FILE, logLine);
 
                 // Respuesta final
                 await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
