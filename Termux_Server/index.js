@@ -23,31 +23,31 @@ if (!fs.existsSync(QUEUE_FILE)) {
 const PREGUNTAS = [
     {
         key: '¿QUÉ MODELO DE AGX NECESITAS?',
-        msg: '*[1/7] ¿QUÉ MODELO DE AGX NECESITAS?*\n1. Modelo 8000\n2. Modelo 8200\n\n_(Responde 1 o 2)_'
+        msg: '*¿QUÉ MODELO DE AGX NECESITAS?*\n\n1. Modelo 8000\n2. Modelo 8200\n\n_-Responde 1 o 2-_'
     },
     {
         key: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:',
-        msg: '*[2/7] INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:*\n_(Ejemplo: ANFORA, BAJAJ, BIOGRUP, etc. Solo ingresa el nombre de uno)_'
+        msg: '*INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:*\n_(Ejemplo: ANFORA, BAJAJ, BIOGRUP, etc.)_'
     },
     {
         key: '¿DE QUÉ TIPO SERÁ?',
-        msg: '*[3/7] ¿DE QUÉ TIPO SERÁ?*\n_(Abierto es lo mismo que Forzado)_\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_(Responde 1, 2 o 3)_'
+        msg: '*¿DE QUÉ TIPO SERÁ?*\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
     },
     {
         key: 'FLUJO OPERATIVO:',
-        msg: '*[4/7] FLUJO OPERATIVO:*\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_(Responde 1, 2 o 3)_'
+        msg: '*FLUJO OPERATIVO:*\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
     },
     {
         key: 'MARBETE Y UBICACIÓN',
-        msg: '*[5/7] MARBETE Y UBICACIÓN*\n_(Se trabajarán Marbetes y Ubicación o sólo uno de los dos. En caso de ser ambos seleccione "Ambos")_\n1. Solo Marbete\n2. Solo Ubicación\n3. Ambos\n\n_(Responde 1, 2 o 3)_'
+        msg: '*MARBETE Y UBICACIÓN*\n\n1. Solo Marbete\n2. Solo Ubicación\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
     },
     {
         key: '¿QUÉ NIVEL DE PRIORIDAD DAREMOS?',
-        msg: '*[6/7] ¿QUÉ NIVEL DE PRIORIDAD DAREMOS?*\n_(Si los Marbetes tienen muchas Ubicaciones elige "a")_\n_(Si las Ubicaciones tienen muchos Marbetes elige "b")_\n_(La opción "c" te da la facilidad de registrar ambos en la misma pantalla.)_\n\na. Primero registrar Marbete y en la pantalla siguiente Ubicación.\nb. Primero registrar Ubicación y en la pantalla siguiente Marbetes.\nc. Registrar ambos en la misma pantalla.\n\n_(Responde a, b o c)_'
+        msg: '*¿QUÉ NIVEL DE PRIORIDAD DAREMOS?*\n_Si los Marbetes tienen muchas Ubicaciones elige "a"._\n_Si las Ubicaciones tienen muchos Marbetes elige "b"._\n_La opción "c" te da la facilidad de registrar ambos en la misma pantalla._\n\na. Primero registrar Marbete y en la pantalla siguiente Ubicación.\n\nb. Primero registrar Ubicación y en la pantalla siguiente Marbetes.\n\nc. Registrar ambos en la misma pantalla.\n\n_-Responde "a", "b" o "c"-_'
     },
     {
         key: 'DATOS REQUERIDOS',
-        msg: '*[7/7] DATOS REQUERIDOS*\n_(Ejemplo de Solicitud:_\n_Marbete: 5 num_\n_Ubicacion: 3-12_\n_SK: 5-15 alfanum Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6 decimal_\n_Lote: 0-11 alfanum_\n_Cantidad: 1-10)_'
+        msg: '*DATOS REQUERIDOS*\n_Ejemplo de Solicitud:_\n\n_Marbete: 5 num_\n_Ubicacion: 3-12_\n_SK: 5-15 alfanum Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6 decimal_\n_Lote: 0-11 alfanum_\n_Cantidad: 1-10_'
     }
 ];
 
@@ -117,7 +117,7 @@ client.on('message', async msg => {
             mention_id: chat.isGroup ? user_id : null 
         };
         
-        await client.sendMessage(user_id, '🤖 *¡Hola! Bienvenido al creador de Solicitudes AGX.*\nTe haré unas preguntas rápidas.\n_(Escribe *Regresar* en cualquier momento para corregir, o *Cancelar* para abortar)_');
+        await client.sendMessage(user_id, '🤖 *¡Hola! Bienvenidx al creador de Solicitudes AGX.*\n\nTe haré unas preguntas rápidas.\n_Escribe *"Regresar"* en cualquier momento para corregir, o *"Cancelar"* para abortar)_');
         await client.sendMessage(user_id, PREGUNTAS[0].msg);
         return;
     }
@@ -264,16 +264,16 @@ client.on('message', async msg => {
             let conteoVisual = ans['FLUJO OPERATIVO:'];
             if (conteoVisual === 'Ambos') conteoVisual = 'Pz x Pz y Volumen';
 
-            const msg1 = `Se ha recibido la siguiente información:
-Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}
-Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}
-Tipo: ${tipoVisual}
-Conteo: ${conteoVisual}
-Con ${marbeteUbicacionStr}`;
+            const msg1 = `Se ha recibido la siguiente información:\n
+-Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}
+-Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}
+-Tipo: ${tipoVisual}
+-Conteo: ${conteoVisual}
+-Con ${marbeteUbicacionStr}`;
 
             const msg2 = ans['DATOS REQUERIDOS'];
             
-            const msg3 = `Revisa bien la información brindada antes de enviarla
+            const msg3 = `Revisa bien la información brindada antes de enviarla.
 
 a. Enviar
 b. Corregir (regresa a la última pregunta)
