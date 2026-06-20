@@ -95,6 +95,28 @@ const client = new Client({
     puppeteer: puppeteerOptions
 });
 
+// ==========================================
+// HUMANIZACIÓN DE RESPUESTAS (Anti-Ban Meta)
+// ==========================================
+const originalSendMessage = client.sendMessage.bind(client);
+
+client.sendMessage = async function(chatId, content, options = {}) {
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const randomDelay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500; // Entre 1.5 y 3.0 segundos
+    
+    try {
+        const chat = await this.getChatById(chatId);
+        if (chat && chat.sendStateTyping) {
+            await chat.sendStateTyping();
+        }
+    } catch (e) {
+        // Ignorar errores al tratar de obtener chat
+    }
+    
+    await sleep(randomDelay);
+    return await originalSendMessage(chatId, content, options);
+};
+
 client.on('qr', (qr) => {
     console.log('➤ Escanea este código QR con la app de WhatsApp para vincular el bot de Termux:');
     qrcode.generate(qr, { small: true });
