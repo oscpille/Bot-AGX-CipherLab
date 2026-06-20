@@ -152,8 +152,44 @@ client.on('message', async msg => {
         }
         
         const step = session.step;
-        const qKey = PREGUNTAS[step].key;
+        const qKey = step < PREGUNTAS.length ? PREGUNTAS[step].key : 'CONFIRMACION';
         let bodyParsed = body;
+
+        if (qKey === 'CONFIRMACION') {
+            if (bodyLower === 'a' || bodyLower === 'a.' || bodyLower === 'enviar') {
+                // Finalizó el formulario
+                session.answers['ESTATUS:'] = 'PENDIENTE';
+                session.answers['id_solicitud'] = Date.now().toString();
+                session.answers['chat_id'] = session.chat_id; // Fundamental para envío silencioso posterior
+                session.answers['mention_id'] = session.mention_id;
+
+                // Guardar en queue.json
+                const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
+                queueData.push(session.answers);
+                fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
+
+                // Respuesta final
+                await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
+                
+                const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
+                console.log(`➤ Nueva solicitud enfilada (Inventario: ${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}) [${fechaStr}]`);
+
+                // Limpiar sesión
+                delete sessions[user_id];
+                return;
+            } else if (bodyLower === 'b' || bodyLower === 'b.' || bodyLower === 'corregir') {
+                session.step -= 1;
+                await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
+                return;
+            } else if (bodyLower === 'c' || bodyLower === 'c.' || bodyLower === 'cancelar') {
+                delete sessions[user_id];
+                await client.sendMessage(user_id, '🛑 Formulario cancelado.');
+                return;
+            } else {
+                await client.sendMessage(user_id, '⚠️ Responde solo con a, b o c.');
+                return;
+            }
+        }
 
         // Mapeo numérico
         if (qKey === '¿QUÉ MODELO DE AGX NECESITAS?') {
@@ -204,26 +240,48 @@ client.on('message', async msg => {
         if (session.step < PREGUNTAS.length) {
             // Mandar siguiente pregunta
             await client.sendMessage(user_id, PREGUNTAS[session.step].msg);
-        } else {
-            // Finalizó el formulario
-            session.answers['ESTATUS:'] = 'PENDIENTE';
-            session.answers['id_solicitud'] = Date.now().toString();
-            session.answers['chat_id'] = session.chat_id; // Fundamental para envío silencioso posterior
-            session.answers['mention_id'] = session.mention_id;
-
-            // Guardar en queue.json
-            const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
-            queueData.push(session.answers);
-            fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
-
-            // Respuesta final
-            await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
+        } else if (session.step === PREGUNTAS.length) {
+            // Mandar los 3 mensajes de confirmación
+            const ans = session.answers;
             
-            const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
-            console.log(`➤ Nueva solicitud enfilada (Inventario: ${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}) [${fechaStr}]`);
+            let marbeteUbicacionStr = '';
+            if (ans['MARBETE Y UBICACIÓN'] === 'Solo Marbete') marbeteUbicacionStr = 'solo Marbete';
+            else if (ans['MARBETE Y UBICACIÓN'] === 'Solo Ubicación') marbeteUbicacionStr = 'solo Ubicación';
+            else {
+                const prioridad = ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || '';
+                if (prioridad.includes('Primero registrar Marbete')) {
+                    marbeteUbicacionStr = 'Marbete y Ubicación (Primero Marbete)';
+                } else if (prioridad.includes('Primero registrar Ubicación')) {
+                    marbeteUbicacionStr = 'Marbete y Ubicación (Primero Ubicación)';
+                } else {
+                    marbeteUbicacionStr = 'Marbete y Ubicación en una pantalla';
+                }
+            }
 
-            // Limpiar sesión
-            delete sessions[user_id];
+            let tipoVisual = ans['¿DE QUÉ TIPO SERÁ?'];
+            if (tipoVisual === 'Ambos') tipoVisual = 'Abierto y Cerrado';
+            
+            let conteoVisual = ans['FLUJO OPERATIVO:'];
+            if (conteoVisual === 'Ambos') conteoVisual = 'Pz x Pz y Volumen';
+
+            const msg1 = `Se ha recibido la siguiente información:
+Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}
+Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}
+Tipo: ${tipoVisual}
+Conteo: ${conteoVisual}
+Con ${marbeteUbicacionStr}`;
+
+            const msg2 = ans['DATOS REQUERIDOS'];
+            
+            const msg3 = `Revisa bien la información brindada antes de enviarla
+
+a. Enviar
+b. Corregir (regresa a la última pregunta)
+c. Cancelar (cancela la petición)`;
+
+            await client.sendMessage(user_id, msg1);
+            await client.sendMessage(user_id, msg2);
+            await client.sendMessage(user_id, msg3);
         }
     }
 });

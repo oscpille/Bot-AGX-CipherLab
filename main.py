@@ -18,12 +18,14 @@ def main():
         cola = response.json()
     except requests.exceptions.RequestException as e:
         print(f"❌ No se pudo conectar al celular (Termux): {e}")
+        input("\nPresiona Enter para cerrar la ventana...")
         sys.exit()
         
     solicitudes_pendientes = [s for s in cola if s.get('ESTATUS:') == 'PENDIENTE']
     
     if not solicitudes_pendientes:
         print("\n✅ Bandeja limpia: No hay solicitudes PENDIENTES por procesar. Cerrando...")
+        input("\nPresiona Enter para cerrar la ventana...")
         sys.exit()
         
     print(f"\n🔔 Se encontraron {len(solicitudes_pendientes)} solicitudes pendientes.")
@@ -31,6 +33,7 @@ def main():
     respuesta = input("¿Comenzar procesamiento en lote? (s/n): ").strip().lower()
     if respuesta != 's':
         print("\n🛑 Proceso abortado por el usuario. Saliendo del sistema...")
+        input("\nPresiona Enter para cerrar la ventana...")
         sys.exit()
         
     # Iterar sobre todas las solicitudes en modo ráfaga
@@ -79,10 +82,13 @@ def main():
             print("La solicitud se mantiene en Termux para revisión manual o reinicio.")
             # Forzamos cierre para no arrastrar la ventana corrupta a la siguiente solicitud
             os.system("taskkill /IM ForgeAG.exe /F /T >nul 2>&1")
+            input("\nPresiona Enter para cerrar la ventana...")
+            sys.exit()
             
     print("\n=====================================================")
     print("✅ RÁFAGA FINALIZADA. COLA VACÍA. APAGANDO MOTORES.")
     print("=====================================================")
+    input("\nPresiona Enter para cerrar la ventana...")
 
 if __name__ == "__main__":
     main()
