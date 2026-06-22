@@ -320,7 +320,36 @@ def abrir_programa_y_plantilla(modelo):
 
     print(f"➤ Abriendo software ForgeAG ({modelo})...")
     os.startfile(lnk_path)
-    time.sleep(1.5) 
+    
+    import pygetwindow as gw
+    ventana_agx = None
+    
+    # Esperar hasta 10 segundos buscando la ventana
+    print("➤ Buscando la ventana en el sistema y forzando primer plano...")
+    for _ in range(20):
+        # El nombre del programa suele contener "Forge" o "AGX" o el modelo
+        ventanas = [v for v in gw.getAllWindows() if "Forge" in v.title or "AG" in v.title or modelo in v.title]
+        if ventanas:
+            ventana_agx = ventanas[0]
+            break
+        time.sleep(0.5)
+
+    if ventana_agx:
+        try:
+            if ventana_agx.isMinimized:
+                ventana_agx.restore()
+            
+            # Hack para Windows: Presionar ALT libera el bloqueo de focus
+            pyautogui.press('alt')
+            ventana_agx.activate()
+            time.sleep(0.5)
+            print(f"✅ Ventana '{ventana_agx.title}' colocada en primer plano con éxito.")
+        except Exception as e:
+            print(f"⚠️ No se pudo forzar el foco de la ventana (políticas de Windows): {e}")
+            time.sleep(1.0)
+    else:
+        print("⚠️ Advertencia: No se detectó visualmente la ventana. Continuando por si el título es diferente...")
+        time.sleep(2.0)
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
