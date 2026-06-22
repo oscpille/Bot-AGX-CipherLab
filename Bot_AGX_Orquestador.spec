@@ -1,11 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 
+from PyInstaller.utils.hooks import collect_data_files
+
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=collect_data_files('grpc'),
     hiddenimports=['mapeo_8000', 'mapeo_8200'],
     hookspath=[],
     hooksconfig={},

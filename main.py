@@ -90,12 +90,41 @@ def main():
             continue
             
         try:
-            docs = db.collection('solicitudes').where('ESTATUS:', '==', 'PENDIENTE').get()
+            docs = db.collection('solicitudes').where('ESTATUS', '==', 'PENDIENTE').get()
+            todas_las_docs = list(docs)
+            
             solicitudes_pendientes = []
-            for doc in docs:
-                datos = doc.to_dict()
-                datos['firebase_id'] = doc.id
-                solicitudes_pendientes.append(datos)
+            for doc in todas_las_docs:
+                datos_crudos = doc.to_dict()
+                
+                # Aplanar los datos para el extractor_datos.py
+                datos_planos = {}
+                if '2_Respuestas_del_Cliente' in datos_crudos:
+                    resp = datos_crudos['2_Respuestas_del_Cliente']
+                    datos_planos['¿QUÉ MODELO DE AGX NECESITAS?'] = resp.get('Modelo_AGX', '')
+                    datos_planos['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:'] = resp.get('Cliente', '')
+                    datos_planos['¿DE QUÉ TIPO SERÁ?'] = resp.get('Tipo', '')
+                    datos_planos['FLUJO OPERATIVO:'] = resp.get('Flujo_Operativo', '')
+                    datos_planos['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] = resp.get('Prioridad', '')
+                    datos_planos['DATOS REQUERIDOS'] = resp.get('Variables_Requeridas', '')
+                    datos_planos['MARBETE Y UBICACIÓN'] = resp.get('Marbete_Ubicacion', '')
+                else:
+                    # Formato viejo
+                    datos_planos = datos_crudos.copy()
+                
+                if '3_Metadatos_Internos' in datos_crudos:
+                    meta = datos_crudos['3_Metadatos_Internos']
+                    datos_planos['id_solicitud'] = meta.get('id_solicitud', doc.id)
+                    datos_planos['chat_id'] = meta.get('chat_id', '')
+                    datos_planos['mention_id'] = meta.get('mention_id', None)
+                else:
+                    # Formato viejo
+                    datos_planos['id_solicitud'] = datos_crudos.get('id_solicitud', doc.id)
+                    datos_planos['chat_id'] = datos_crudos.get('chat_id', '')
+                    datos_planos['mention_id'] = datos_crudos.get('mention_id', None)
+                    
+                datos_planos['firebase_id'] = doc.id
+                solicitudes_pendientes.append(datos_planos)
                 
         except Exception as e:
             print(f"⚠️ Error de red consultando la nube: {e}")
@@ -149,14 +178,19 @@ def main():
                     })
                     
                 try:
-                    firebase_id = datos_extraidos.get('firebase_id')
+                    firebase_id = solicitud.get('firebase_id')
                     if firebase_id and db:
-                        db.collection('solicitudes').document(firebase_id).update({
-                            'ESTATUS:': 'COMPLETADO',
+                        db.collection('solicitudes').document(firebase_id).set({
+                            '1_Estado_de_Orden': {
+                                'Estatus': 'COMPLETADO',
+                                'Entregado_al_usuario': False
+                            },
+                            '4_Archivos_Entregados': archivos_para_subir,
+                            'ESTATUS': 'COMPLETADO',
                             'archivos': archivos_para_subir,
                             'entregado_al_usuario': False
-                        })
-                        print(f"✅ {len(archivos_para_subir)} archivos de {cliente} subidos a la nube y cola actualizada.")
+                        }, merge=True)
+                        print(f"✅ Archivos subidos a la nube y cola actualizada.")
                 except Exception as req_e:
                     print(f"⚠️ No se pudo subir el archivo a Firebase: {req_e}")
                 

@@ -2,20 +2,21 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const os = require('os');
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 
 // Inicializar Firebase
 try {
     const serviceAccount = require('./firebase_key.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+    initializeApp({
+      credential: cert(serviceAccount)
     });
     console.log("✅ Conectado a Firebase Firestore (Nube de Google).");
 } catch(e) {
-    console.log("⚠️ Advertencia: No se encontró firebase_key.json. El bot no podrá enviar peticiones a la PC.");
+    console.log("⚠️ Advertencia al conectar a Firebase:", e.message);
 }
 
-const db = admin.firestore ? admin.firestore() : null;
+const db = getFirestore();
 
 const HISTORIAL_FILE = './historial_agx.txt';
 
@@ -145,10 +146,8 @@ client.on('message', async msg => {
     const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx'];
     if (triggerWords.includes(bodyLower)) {
         if (chat.isGroup) {
-            // Etiquetar al usuario en el grupo usando su ID directamente
-            await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`, {
-                mentions: [user_id]
-            });
+            // Etiquetar al usuario en el grupo (solo texto, sin options.mentions) para máxima estabilidad
+            await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
         }
         
         // Guardar sesión usando el ID privado del usuario, guardando el origen para la entrega final
@@ -200,20 +199,48 @@ client.on('message', async msg => {
         if (qKey === 'CONFIRMACION') {
             if (bodyLower === 'a' || bodyLower === 'a.' || bodyLower === 'enviar') {
                 // Finalizó el formulario
-                session.answers['ESTATUS:'] = 'PENDIENTE';
-                session.answers['id_solicitud'] = Date.now().toString();
-                session.answers['chat_id'] = session.chat_id; // Fundamental para envío silencioso posterior
-                session.answers['mention_id'] = session.mention_id;
+                const ans = session.answers;
+                const now = new Date();
+                const pad = (n) => n.toString().padStart(2, '0');
+                const readableDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+                const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                const id_solicitud = `${readableDate}_${rand}`;
 
-                // Guardar en Firestore en lugar de queue.json local
+                const documentData = {
+                    "1_Estado_de_Orden": {
+                        "Estatus": "PENDIENTE",
+                        "Fecha_Legible": `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+                        "Entregado_al_usuario": false
+                    },
+                    "2_Respuestas_del_Cliente": {
+                        "Modelo_AGX": ans['¿QUÉ MODELO DE AGX NECESITAS?'] || "",
+                        "Cliente": ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:'] || "",
+                        "Tipo": ans['¿DE QUÉ TIPO SERÁ?'] || "",
+                        "Flujo_Operativo": ans['FLUJO OPERATIVO:'] || "",
+                        "Prioridad": ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || "",
+                        "Variables_Requeridas": ans['DATOS REQUERIDOS'] || "",
+                        "Marbete_Ubicacion": ans['MARBETE Y UBICACIÓN'] || ""
+                    },
+                    "3_Metadatos_Internos": {
+                        "id_solicitud": id_solicitud,
+                        "chat_id": session.chat_id,
+                        "mention_id": session.mention_id || null
+                    },
+                    "ESTATUS": "PENDIENTE"
+                };
+
+                // Guardar en Firestore
                 if (db) {
                     try {
-                        await db.collection('solicitudes').doc(session.answers['id_solicitud']).set(session.answers);
-                        console.log(`➤ Solicitud ${session.answers['id_solicitud']} subida a Firebase exitosamente.`);
+                        await db.collection('solicitudes').doc(id_solicitud).set(documentData);
+                        console.log(`➤ Solicitud ${id_solicitud} subida a Firebase exitosamente.`);
                     } catch(e) {
                         console.log('⚠️ Error al subir a Firebase:', e);
                     }
                 }
+                
+                // Actualizar ans para el historial_agx.txt que lo usa más abajo
+                ans['id_solicitud'] = id_solicitud;
 
                 // Guardar en historial_agx.txt
                 let nextId = 1;
@@ -231,7 +258,6 @@ client.on('message', async msg => {
                     }
                 }
                 const paddedId = String(nextId).padStart(5, '0');
-                const ans = session.answers;
                 const inventario = ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:'] || '';
                 const modelo = ans['¿QUÉ MODELO DE AGX NECESITAS?'] || '';
                 const tipo = ans['¿DE QUÉ TIPO SERÁ?'] || '';
@@ -370,50 +396,49 @@ client.initialize();
 // LISTENER EN TIEMPO REAL DE FIREBASE (Reemplaza a Express)
 // ==========================================
 
-if (db) {
-    db.collection('solicitudes').where('ESTATUS:', '==', 'COMPLETADO').onSnapshot((snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
-            // Solo actuar si es una solicitud recién terminada por la PC
-            if (change.type === 'added' || change.type === 'modified') {
-                const data = change.doc.data();
-                
-                // Si tiene archivos listos y no se han entregado por WhatsApp todavía
-                if (data.archivos && !data.entregado_al_usuario) {
-                    const chat_id = data.chat_id;
-                    const mention_id = data.mention_id;
+client.on('ready', () => {
+    if (db) {
+        db.collection('solicitudes').where('ESTATUS', '==', 'COMPLETADO').onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+                // Solo actuar si es una solicitud recién terminada por la PC
+                if (change.type === 'added' || change.type === 'modified') {
+                    const data = change.doc.data();
                     
-                    try {
-                        let options = {};
-                        let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
+                    // Si tiene archivos listos y no se han entregado por WhatsApp todavía
+                    if (data.archivos && !data.entregado_al_usuario) {
+                        const meta = data['3_Metadatos_Internos'] || data;
+                    const chat_id = meta.chat_id;
+                        const mention_id = meta.mention_id;
                         
-                        if (mention_id) {
-                            msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
-                            options.mentions = [mention_id];
+                        try {
+                            let options = {};
+                            let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
+                            
+                            if (mention_id) {
+                                msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
+                            }
+
+                            // Enviar el mensaje introductorio usando client.sendMessage (mucho más rápido y no requiere context)
+                            await client.sendMessage(chat_id, msgText);
+
+                            // Iterar y enviar cada archivo generado
+                            for (let archivo of data.archivos) {
+                                const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
+                                await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
+                            }
+                            
+                            console.log(`📤 Archivos enviados silenciosamente al chat: ${chat_id} para solicitud ${data.id_solicitud}`);
+                            
+                            // Marcar como entregado para que no se reenvíe si se reinicia Termux
+                            await change.doc.ref.update({ entregado_al_usuario: true });
+
+                        } catch (err) {
+                            console.log(`❌ Error al enviar el archivo devuelta por WhatsApp:`, err);
                         }
-
-                        // Enviar el mensaje introductorio
-                        await client.sendMessage(chat_id, msgText, options);
-
-                        // Iterar y enviar cada archivo generado
-                        for (let archivo of data.archivos) {
-                            const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
-                            await client.sendMessage(chat_id, media);
-                        }
-                        
-                        console.log(`📤 Archivos enviados silenciosamente al chat: ${chat_id} para solicitud ${data.id_solicitud}`);
-                        
-                        // Marcar como entregado para que no se reenvíe si se reinicia Termux
-                        await change.doc.ref.update({ entregado_al_usuario: true });
-
-                        // Opcionalmente podemos borrarla para ahorrar espacio en Firebase
-                        // await change.doc.ref.delete(); 
-
-                    } catch (err) {
-                        console.log(`❌ Error al enviar el archivo devuelta por WhatsApp: ${err.message}`);
                     }
                 }
-            }
+            });
         });
-    });
-    console.log("📡 Escuchando respuestas de la PC a través de Firebase...");
-}
+        console.log("📡 Escuchando respuestas de la PC a través de Firebase...");
+    }
+});
