@@ -3,8 +3,18 @@
 # =========================================================
 
 # RUTA_EXCEL = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\SOLICITUD DE AGX.xlsx"
-TERMUX_API_URL = "http://192.168.120.46:3000" # Cámbialo por la IP real del celular en tu WiFi, ej: "http://192.168.1.75:3000"
+import firebase_admin
+from firebase_admin import credentials, firestore
 
+# Configuración Firebase (la llave debe estar en la raíz)
+try:
+    cred = credentials.Certificate('firebase_key.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ PC conectada a Firebase exitosamente.")
+except Exception as e:
+    db = None
+    print(f"⚠️ Error conectando a Firebase: {e}")
 DICCIONARIO_PREFIJOS = {
     # fca
     "fecha de caducidad": "fca", "fecha caducidad": "fca", "fecha de vencimiento": "fca",

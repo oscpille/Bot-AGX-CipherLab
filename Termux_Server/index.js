@@ -1,22 +1,24 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const express = require('express');
-const cors = require('cors');
 const fs = require('fs');
 const os = require('os');
+const admin = require('firebase-admin');
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Inicializar Firebase
+try {
+    const serviceAccount = require('./firebase_key.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("✅ Conectado a Firebase Firestore (Nube de Google).");
+} catch(e) {
+    console.log("⚠️ Advertencia: No se encontró firebase_key.json. El bot no podrá enviar peticiones a la PC.");
+}
 
-const QUEUE_FILE = './queue.json';
+const db = admin.firestore ? admin.firestore() : null;
+
 const HISTORIAL_FILE = './historial_agx.txt';
 
-// Inicializar queue.json si no existe
-if (!fs.existsSync(QUEUE_FILE)) {
-    fs.writeFileSync(QUEUE_FILE, JSON.stringify([]));
-}
 // Crear historial si no existe
 if (!fs.existsSync(HISTORIAL_FILE)) {
     fs.writeFileSync(HISTORIAL_FILE, "");
@@ -203,10 +205,15 @@ client.on('message', async msg => {
                 session.answers['chat_id'] = session.chat_id; // Fundamental para envío silencioso posterior
                 session.answers['mention_id'] = session.mention_id;
 
-                // Guardar en queue.json
-                const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
-                queueData.push(session.answers);
-                fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
+                // Guardar en Firestore en lugar de queue.json local
+                if (db) {
+                    try {
+                        await db.collection('solicitudes').doc(session.answers['id_solicitud']).set(session.answers);
+                        console.log(`➤ Solicitud ${session.answers['id_solicitud']} subida a Firebase exitosamente.`);
+                    } catch(e) {
+                        console.log('⚠️ Error al subir a Firebase:', e);
+                    }
+                }
 
                 // Guardar en historial_agx.txt
                 let nextId = 1;
@@ -360,55 +367,53 @@ c. Cancelar (cancela la petición)`;
 client.initialize();
 
 // ==========================================
-// SERVIDOR API REST
+// LISTENER EN TIEMPO REAL DE FIREBASE (Reemplaza a Express)
 // ==========================================
 
-// Obtener todas las solicitudes pendientes
-app.get('/queue', (req, res) => {
-    const queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
-    res.json(queueData);
-});
+if (db) {
+    db.collection('solicitudes').where('ESTATUS:', '==', 'COMPLETADO').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+            // Solo actuar si es una solicitud recién terminada por la PC
+            if (change.type === 'added' || change.type === 'modified') {
+                const data = change.doc.data();
+                
+                // Si tiene archivos listos y no se han entregado por WhatsApp todavía
+                if (data.archivos && !data.entregado_al_usuario) {
+                    const chat_id = data.chat_id;
+                    const mention_id = data.mention_id;
+                    
+                    try {
+                        let options = {};
+                        let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
+                        
+                        if (mention_id) {
+                            msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
+                            options.mentions = [mention_id];
+                        }
 
-// Borrar una solicitud específica Y enviar el archivo devuelta
-const { MessageMedia } = require('whatsapp-web.js');
+                        // Enviar el mensaje introductorio
+                        await client.sendMessage(chat_id, msgText, options);
 
-app.post('/queue/complete', async (req, res) => {
-    const { id_solicitud, chat_id, mention_id, file_base64, file_name } = req.body;
-    let queueData = JSON.parse(fs.readFileSync(QUEUE_FILE));
-    
-    // Enviar el archivo de vuelta a WhatsApp si viene adjunto
-    if (file_base64 && chat_id) {
-        try {
-            const media = new MessageMedia('application/octet-stream', file_base64, file_name || 'AGX_Generado.agx');
-            
-            let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
-            let options = {};
-            
-            if (mention_id) {
-                msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
-                options.mentions = [mention_id];
+                        // Iterar y enviar cada archivo generado
+                        for (let archivo of data.archivos) {
+                            const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
+                            await client.sendMessage(chat_id, media);
+                        }
+                        
+                        console.log(`📤 Archivos enviados silenciosamente al chat: ${chat_id} para solicitud ${data.id_solicitud}`);
+                        
+                        // Marcar como entregado para que no se reenvíe si se reinicia Termux
+                        await change.doc.ref.update({ entregado_al_usuario: true });
+
+                        // Opcionalmente podemos borrarla para ahorrar espacio en Firebase
+                        // await change.doc.ref.delete(); 
+
+                    } catch (err) {
+                        console.log(`❌ Error al enviar el archivo devuelta por WhatsApp: ${err.message}`);
+                    }
+                }
             }
-            
-            await client.sendMessage(chat_id, msgText, options);
-            await client.sendMessage(chat_id, media);
-            console.log(`📤 Archivo enviado silenciosamente al chat: ${chat_id}`);
-        } catch (err) {
-            console.log(`❌ Error al enviar el archivo de vuelta: ${err.message}`);
-        }
-    }
-
-    // Filtrar y eliminar la solicitud procesada
-    queueData = queueData.filter(item => item.id_solicitud !== id_solicitud);
-    
-    fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
-    console.log(`✅ Solicitud ${id_solicitud} completada y removida de la cola.`);
-    
-    res.json({ success: true, message: "Removido de la cola y enviado" });
-});
-
-const PORT = 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Servidor API escuchando en http://0.0.0.0:${PORT}`);
-    console.log(`   Ruta GET:  http://[TU-IP]:${PORT}/queue`);
-    console.log(`   Ruta POST: http://[TU-IP]:${PORT}/queue/complete`);
-});
+        });
+    });
+    console.log("📡 Escuchando respuestas de la PC a través de Firebase...");
+}

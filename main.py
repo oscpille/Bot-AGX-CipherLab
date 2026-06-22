@@ -4,7 +4,8 @@ import time
 import base64
 import requests
 import tkinter as tk
-from config import TERMUX_API_URL
+import tkinter as tk
+from config import db
 from extractor_datos import procesar_solicitud
 from bot_motor import ejecutar_bot
 
@@ -83,16 +84,24 @@ def main():
     print("➤ Puedes minimizar esta ventana negra y seguir trabajando.")
     
     while True:
-        try:
-            response = requests.get(f"{TERMUX_API_URL}/queue", timeout=5)
-            cola = response.json()
-        except requests.exceptions.RequestException as e:
-            # Fallo de red silencioso. Dormir y reintentar.
+        if not db:
+            print("⚠️ Esperando a que se configure la conexión con Firebase...")
             time.sleep(30)
             continue
             
-        solicitudes_pendientes = [s for s in cola if s.get('ESTATUS:') == 'PENDIENTE']
-        
+        try:
+            docs = db.collection('solicitudes').where('ESTATUS:', '==', 'PENDIENTE').get()
+            solicitudes_pendientes = []
+            for doc in docs:
+                datos = doc.to_dict()
+                datos['firebase_id'] = doc.id
+                solicitudes_pendientes.append(datos)
+                
+        except Exception as e:
+            print(f"⚠️ Error de red consultando la nube: {e}")
+            time.sleep(30)
+            continue
+            
         if not solicitudes_pendientes:
             time.sleep(30)
             continue
@@ -126,26 +135,30 @@ def main():
                 chat_id = datos_extraidos.get('chat_id', '')
                 mention_id = datos_extraidos.get('mention_id', None)
                 
-                print(f"\n➤ Avisando al servidor Termux para borrar solicitud ID: {id_solicitud}...")
+                print(f"\n➤ Subiendo archivos a la Nube (Firebase) para la solicitud ID: {id_solicitud}...")
                 
+                archivos_para_subir = []
                 for ruta in archivos_generados:
                     with open(ruta, "rb") as f:
                         file_b64 = base64.b64encode(f.read()).decode('utf-8')
                     file_name = os.path.basename(ruta)
                     
-                    payload = {
-                        "id_solicitud": id_solicitud,
-                        "chat_id": chat_id,
-                        "mention_id": mention_id,
+                    archivos_para_subir.append({
                         "file_base64": file_b64,
                         "file_name": file_name
-                    }
+                    })
                     
-                    try:
-                        requests.post(f"{TERMUX_API_URL}/queue/complete", json=payload, timeout=20)
-                        print(f"✅ Archivo {file_name} transmitido al celular y cola actualizada.")
-                    except Exception as req_e:
-                        print(f"⚠️ No se pudo contactar al servidor Termux para subir el archivo: {req_e}")
+                try:
+                    firebase_id = datos_extraidos.get('firebase_id')
+                    if firebase_id and db:
+                        db.collection('solicitudes').document(firebase_id).update({
+                            'ESTATUS:': 'COMPLETADO',
+                            'archivos': archivos_para_subir,
+                            'entregado_al_usuario': False
+                        })
+                        print(f"✅ {len(archivos_para_subir)} archivos de {cliente} subidos a la nube y cola actualizada.")
+                except Exception as req_e:
+                    print(f"⚠️ No se pudo subir el archivo a Firebase: {req_e}")
                 
                 # Limpieza obligatoria post-ejecución (destrucción de instancia)
                 print("\n➤ Ejecutando purga del entorno ForgeAG (Taskkill)...")
