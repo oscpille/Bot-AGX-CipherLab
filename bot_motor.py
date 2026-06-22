@@ -318,13 +318,40 @@ def abrir_programa_y_plantilla(modelo):
         lnk_path = os.path.join(base_path, "8000 ForgeAG.exe.lnk")
         plantilla_path = os.path.join(base_path, "8000 AGX PLANTILLA.AGX")
 
-    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de método abreviado de Windows...")
+    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de VBScript (AppActivate)...")
+    os.startfile(lnk_path)
     
-    # El usuario configuró los atajos en los .lnk: Ctrl+Alt+1 (8000) y Ctrl+Alt+2 (8200)
-    if modelo == "8000":
-        pyautogui.hotkey('ctrl', 'alt', '1')
+    import pygetwindow as gw
+    import tempfile
+    import subprocess
+    
+    print("➤ Buscando el título exacto de la ventana...")
+    titulo_exacto = ""
+    for _ in range(20):
+        todas = gw.getAllWindows()
+        ventanas = []
+        for v in todas:
+            if not v.title: continue
+            if ("Forge" in v.title or modelo in v.title or "AGX" in v.title):
+                if not ("cmd.exe" in v.title.lower() or "orquestador" in v.title.lower() or "bot agx" in v.title.lower() or "powershell" in v.title.lower()):
+                    ventanas.append(v)
+        if ventanas:
+            titulo_exacto = ventanas[-1].title
+            break
+        time.sleep(0.5)
+
+    if titulo_exacto:
+        print(f"➤ Aplicando inyección de foco VBScript a: '{titulo_exacto}'")
+        vbs_code = f'CreateObject("WScript.Shell").AppActivate "{titulo_exacto}"'
+        fd, path_vbs = tempfile.mkstemp(suffix=".vbs")
+        with open(fd, 'w', encoding='utf-8') as f:
+            f.write(vbs_code)
+        
+        # Ejecutar el script VBScript silenciosamente
+        subprocess.run(["cscript.exe", "//Nologo", path_vbs])
+        os.remove(path_vbs)
     else:
-        pyautogui.hotkey('ctrl', 'alt', '2')
+        print("⚠️ Advertencia: No se encontró la ventana para forzar el foco.")
         
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
     time.sleep(3.5) # Espera crucial para que la app Legacy termine de dibujar sus botones y ventana
