@@ -318,75 +318,27 @@ def abrir_programa_y_plantilla(modelo):
         lnk_path = os.path.join(base_path, "8000 ForgeAG.exe.lnk")
         plantilla_path = os.path.join(base_path, "8000 AGX PLANTILLA.AGX")
 
-    print(f"➤ Abriendo software ForgeAG ({modelo})...")
-    os.startfile(lnk_path)
+    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de la barra de tareas...")
     
-    import pygetwindow as gw
-    ventana_agx = None
-    
-    print("➤ Hack de Windows: Tomando el control del primer plano con la Terminal primero...")
-    try:
-        ventanas_term = [v for v in gw.getAllWindows() if "orquestador" in v.title.lower() or "bot agx" in v.title.lower() or "cmd.exe" in v.title.lower()]
-        if ventanas_term:
-            vt = ventanas_term[-1]
-            if vt.isMinimized: vt.restore()
-            pyautogui.press('alt')
-            vt.activate()
-            time.sleep(0.8)
-    except Exception as e:
-        print(f"No se pudo hacer focus a la terminal: {e}")
-    
-    print("➤ Buscando la ventana gráfica en el sistema y forzando primer plano...")
-    for _ in range(30): # Aumentado a 15 segundos
-        todas = gw.getAllWindows()
-        ventanas = []
-        for v in todas:
-            titulo = v.title
-            if not titulo: continue
-            
-            # Buscamos coincidencias
-            es_candidato = "Forge" in titulo or modelo in titulo or "AGX" in titulo
-            
-            # Filtramos fuertemente las terminales negras del bot
-            es_terminal = "cmd.exe" in titulo.lower() or "orquestador" in titulo.lower() or "bot agx" in titulo.lower() or "powershell" in titulo.lower() or "system32" in titulo.lower()
-            
-            if es_candidato and not es_terminal:
-                ventanas.append(v)
-                
-        if ventanas:
-            # Si encuentra más de una, agarramos la última asumiendo que es la más reciente
-            ventana_agx = ventanas[-1]
-            break
-        time.sleep(0.5)
-
-    if ventana_agx:
-        try:
-            if ventana_agx.isMinimized:
-                ventana_agx.restore()
-            
-            # Hack para Windows: Presionar ALT libera el bloqueo de focus
-            pyautogui.press('alt')
-            ventana_agx.activate()
-            print(f"✅ Ventana '{ventana_agx.title}' colocada en primer plano con éxito.")
-            print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de cargar...")
-            time.sleep(3.0) # Espera crucial para que la app Legacy termine de dibujar sus botones
-        except Exception as e:
-            print(f"⚠️ No se pudo forzar el foco de la ventana (políticas de Windows): {e}")
-            time.sleep(3.0)
+    # El usuario ancló las apps: Win+1 (8000) y Win+2 (8200)
+    if modelo == "8000":
+        pyautogui.hotkey('win', '1')
     else:
-        print("⚠️ Advertencia: No se detectó visualmente la ventana. Continuando por si el título es diferente...")
-        time.sleep(3.0)
+        pyautogui.hotkey('win', '2')
+        
+    print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
+    time.sleep(3.5) # Espera crucial para que la app Legacy termine de dibujar sus botones y ventana
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
-    time.sleep(0.50) # Aumentado de 0.24 a 0.50 para menú File
+    time.sleep(0.50) 
     pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(1.0) # Aumentado para que salga la ventana de explorador de archivos
+    time.sleep(1.0) 
     
     pyautogui.write(plantilla_path)
     time.sleep(0.40)
     pyautogui.press('enter')
-    time.sleep(1.50) # Aumentado para dar tiempo a cargar el AGX pesado
+    time.sleep(1.50) 
 
 def guardar_trabajo_final(modelo, cliente, tipo_agx):
     """Guarda el archivo AGX con el formato [Cliente] [Tipo] [Modelo] [Fecha] v[Version].AGX"""
