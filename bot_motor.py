@@ -324,13 +324,26 @@ def abrir_programa_y_plantilla(modelo):
     import pygetwindow as gw
     ventana_agx = None
     
-    # Esperar hasta 10 segundos buscando la ventana
-    print("➤ Buscando la ventana en el sistema y forzando primer plano...")
-    for _ in range(20):
-        # El nombre del programa suele contener "Forge" o "AGX" o el modelo
-        ventanas = [v for v in gw.getAllWindows() if "Forge" in v.title or "AG" in v.title or modelo in v.title]
+    print("➤ Buscando la ventana gráfica en el sistema y forzando primer plano...")
+    for _ in range(30): # Aumentado a 15 segundos
+        todas = gw.getAllWindows()
+        ventanas = []
+        for v in todas:
+            titulo = v.title
+            if not titulo: continue
+            
+            # Buscamos coincidencias
+            es_candidato = "Forge" in titulo or modelo in titulo or "AGX" in titulo
+            
+            # Filtramos fuertemente las terminales negras del bot
+            es_terminal = "cmd.exe" in titulo.lower() or "orquestador" in titulo.lower() or "bot agx" in titulo.lower() or "powershell" in titulo.lower() or "system32" in titulo.lower()
+            
+            if es_candidato and not es_terminal:
+                ventanas.append(v)
+                
         if ventanas:
-            ventana_agx = ventanas[0]
+            # Si encuentra más de una, agarramos la última asumiendo que es la más reciente
+            ventana_agx = ventanas[-1]
             break
         time.sleep(0.5)
 
