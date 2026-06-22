@@ -318,13 +318,13 @@ def abrir_programa_y_plantilla(modelo):
         lnk_path = os.path.join(base_path, "8000 ForgeAG.exe.lnk")
         plantilla_path = os.path.join(base_path, "8000 AGX PLANTILLA.AGX")
 
-    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de la barra de tareas...")
+    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de método abreviado de Windows...")
     
-    # El usuario ancló las apps: Win+1 (8000) y Win+2 (8200)
+    # El usuario configuró los atajos en los .lnk: Ctrl+Alt+1 (8000) y Ctrl+Alt+2 (8200)
     if modelo == "8000":
-        pyautogui.hotkey('win', '1')
+        pyautogui.hotkey('ctrl', 'alt', '1')
     else:
-        pyautogui.hotkey('win', '2')
+        pyautogui.hotkey('ctrl', 'alt', '2')
         
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
     time.sleep(3.5) # Espera crucial para que la app Legacy termine de dibujar sus botones y ventana
