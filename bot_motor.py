@@ -355,25 +355,26 @@ def abrir_programa_y_plantilla(modelo):
             # Hack para Windows: Presionar ALT libera el bloqueo de focus
             pyautogui.press('alt')
             ventana_agx.activate()
-            time.sleep(0.5)
             print(f"✅ Ventana '{ventana_agx.title}' colocada en primer plano con éxito.")
+            print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de cargar...")
+            time.sleep(3.0) # Espera crucial para que la app Legacy termine de dibujar sus botones
         except Exception as e:
             print(f"⚠️ No se pudo forzar el foco de la ventana (políticas de Windows): {e}")
-            time.sleep(1.0)
+            time.sleep(3.0)
     else:
         print("⚠️ Advertencia: No se detectó visualmente la ventana. Continuando por si el título es diferente...")
-        time.sleep(2.0)
+        time.sleep(3.0)
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
-    time.sleep(0.24)
+    time.sleep(0.50) # Aumentado de 0.24 a 0.50 para menú File
     pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(0.70) 
+    time.sleep(1.0) # Aumentado para que salga la ventana de explorador de archivos
     
     pyautogui.write(plantilla_path)
-    time.sleep(0.26)
+    time.sleep(0.40)
     pyautogui.press('enter')
-    time.sleep(1.00) 
+    time.sleep(1.50) # Aumentado para dar tiempo a cargar el AGX pesado
 
 def guardar_trabajo_final(modelo, cliente, tipo_agx):
     """Guarda el archivo AGX con el formato [Cliente] [Tipo] [Modelo] [Fecha] v[Version].AGX"""
