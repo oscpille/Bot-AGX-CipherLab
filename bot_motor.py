@@ -324,6 +324,18 @@ def abrir_programa_y_plantilla(modelo):
     import pygetwindow as gw
     ventana_agx = None
     
+    print("➤ Hack de Windows: Tomando el control del primer plano con la Terminal primero...")
+    try:
+        ventanas_term = [v for v in gw.getAllWindows() if "orquestador" in v.title.lower() or "bot agx" in v.title.lower() or "cmd.exe" in v.title.lower()]
+        if ventanas_term:
+            vt = ventanas_term[-1]
+            if vt.isMinimized: vt.restore()
+            pyautogui.press('alt')
+            vt.activate()
+            time.sleep(0.8)
+    except Exception as e:
+        print(f"No se pudo hacer focus a la terminal: {e}")
+    
     print("➤ Buscando la ventana gráfica en el sistema y forzando primer plano...")
     for _ in range(30): # Aumentado a 15 segundos
         todas = gw.getAllWindows()
