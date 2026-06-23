@@ -31,24 +31,24 @@ if (!fs.existsSync(HISTORIAL_FILE)) {
 const PREGUNTAS = [
     {
         key: '¿QUÉ MODELO DE AGX NECESITAS?',
-        msg: '*¿QUÉ MODELO DE AGX NECESITAS?*\n\n1. Modelo 8000\n2. Modelo 8200\n\n_-Responde 1 o 2-_'
+        msg: '¿QUÉ MODELO DE AGX NECESITAS?\n\n\n\n1. Modelo 8000\n2. Modelo 8200\n\n\n\n_-Responde: 1 o 2-_'
     },
     {
         key: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:',
-        msg: '*INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:*\n_(Ejemplo: ANFORA, BAJAJ, BIOGRUP, etc.)_'
+        msg: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:\n\n\n\n_(Anfora, BAJAJ, biogrup, etc.)_'
     },
     {
         key: '¿DE QUÉ TIPO SERÁ?',
-        msg: '*¿DE QUÉ TIPO SERÁ?*\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
+        msg: '¿DE QUÉ TIPO SERÁ?\n\n\n\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n\n\n_-Responde: 1, 2 o 3-_'
     },
     {
         key: 'FLUJO OPERATIVO:',
-        msg: '*FLUJO OPERATIVO:*\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
+        msg: 'FLUJO OPERATIVO:\n\n\n\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n\n\n_-Responde: 1, 2 o 3-_'
     },
 
     {
         key: 'DATOS REQUERIDOS',
-        msg: '*DATOS REQUERIDOS*\n_Ejemplo de Solicitud:_\n\n_Marbete: 5 num_\n_Ubicacion: 3-12_\n_SK: 5-15 alfanum Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6 decimal_\n_Lote: 0-11 alfanum_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea._'
+        msg: 'DATOS REQUERIDOS\n\n\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
     }
 ];
 
@@ -151,7 +151,7 @@ client.on('message', async msg => {
             mention_id: chat.isGroup ? user_id : null 
         };
         
-        await client.sendMessage(user_id, '🤖 Te damos la bienvenida al creador de Solicitudes AGX.\n\nPuede escribir en cualquier momento:\n\n"Regresar" - Para corregir la respuesta anterior.\n"Cancelar" - Para abortar el proceso.');
+        await client.sendMessage(user_id, '🤖 `Te damos la bienvenida al creador de Solicitudes AGX.`\n\n\n\n```Puede escribir en cualquier momento:```\n\n\n\n`Cancelar` -> _Para abortar el proceso._\n`Regresar` -> _Para corregir la respuesta anterior._');
         await client.sendMessage(user_id, PREGUNTAS[0].msg);
         return;
     }
@@ -264,7 +264,7 @@ client.on('message', async msg => {
                 fs.appendFileSync(HISTORIAL_FILE, logLine);
 
                 // Respuesta final
-                await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
+                await client.sendMessage(user_id, '¡Listo! `Solicitud enviada.`');
                 
                 const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
                 console.log(`➤ [${fechaStr}] Nueva solicitud: "${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}"`);
@@ -281,7 +281,7 @@ client.on('message', async msg => {
                 await client.sendMessage(user_id, '🛑 Formulario cancelado.');
                 return;
             } else {
-                await client.sendMessage(user_id, '⚠️ Responde solo con a, b o c.');
+                await client.sendMessage(user_id, '`⚠️ Responde solo con a, b o c.`');
                 return;
             }
         }
@@ -290,19 +290,19 @@ client.on('message', async msg => {
         if (qKey === '¿QUÉ MODELO DE AGX NECESITAS?') {
             if (body === '1') bodyParsed = '8000';
             else if (body === '2') bodyParsed = '8200';
-            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1 o 2.'); return; }
+            else { await client.sendMessage(user_id, '`⚠️ Responde solo con 1 o 2.`'); return; }
         }
         else if (qKey === '¿DE QUÉ TIPO SERÁ?') {
             if (body === '1') bodyParsed = 'Abierto';
             else if (body === '2') bodyParsed = 'Cerrado';
             else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
+            else { await client.sendMessage(user_id, '`⚠️ Responde solo con 1, 2 o 3.`'); return; }
         }
         else if (qKey === 'FLUJO OPERATIVO:') {
             if (body === '1') bodyParsed = 'Pieza x Pieza';
             else if (body === '2') bodyParsed = 'Volumen'; 
             else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
+            else { await client.sendMessage(user_id, '`⚠️ Responde solo con 1, 2 o 3.`'); return; }
         }
         else if (qKey === 'DATOS REQUERIDOS') {
             if (session.awaitingWarning) {
@@ -379,24 +379,31 @@ client.on('message', async msg => {
             if (marb) finalLocs.push(marb);
             if (finalLocs.length === 0) finalLocs = locs; 
             
-            let screenText = `> Datos Solicitados x Pantalla:\n`;
+            let screenText = '`Se ha recibido la siguiente información:`\n\n\n\n';
+            screenText += `- Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}\n`;
+            screenText += `- Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}\n`;
+            screenText += `- Tipo: ${tipoVisual}\n`;
+            screenText += `- Conteo: ${conteoVisual}\n`;
+            screenText += `- Datos Solicitados x Pantalla:\n`;
+
             if (finalLocs.length > 0) {
                 for (let i = 0; i < finalLocs.length; i++) {
-                    screenText += `\n  Localización ${i + 1}/${finalLocs.length}:\n  - ${finalLocs[i]}\n`;
+                    screenText += `\n\n\n\n\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
                 }
             }
             
             let prefix = (ans['FLUJO OPERATIVO:'] === 'Volumen') ? 'Datos Vol' : 'Datos PzxPz';
             if (dataGroups.length > 0) {
                 for (let i = 0; i < dataGroups.length; i++) {
-                    screenText += `\n  ${prefix} ${i + 1}/${dataGroups.length}:\n`;
+                    screenText += `\n\n\n\n\`\`\`Pantalla ${prefix} ${i + 1}/${dataGroups.length}:\`\`\`\n`;
                     for (let item of dataGroups[i]) {
-                        screenText += `  - ${item}\n`;
+                        screenText += `- ${item}\n`;
                     }
+                    screenText = screenText.trimEnd();
                 }
             }
             
-            const msgFinal = `Se ha recibido la siguiente información:\n\n> Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}\n> Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}\n> Tipo: ${tipoVisual}\n> Conteo: ${conteoVisual}\n${screenText}\nRevisa bien la información brindada antes de enviarla.\n\na. Enviar\nb. Corregir (regresa a la última pregunta)\nc. Cancelar (cancela la petición)`;
+            const msgFinal = `${screenText}\n\n\n\n\`Revisa bien la información brindada antes de enviarla:\`\n\n\n\n\`a\`. *Enviar*\n\`b\`. *Regresar* _(regresa a la última pregunta)_\n\`c\`. *Cancelar* _(cancela la petición)_`;
 
             await new Promise(resolve => setTimeout(resolve, 2000));
             await client.sendMessage(user_id, msgFinal);
@@ -426,10 +433,10 @@ client.on('ready', () => {
                         
                         try {
                             let options = {};
-                            let msgText = '✅ Tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:';
+                            let msgText = '```✅ ¡AGX generado exitosamente!```\n\nAquí tienes tu archivo:';
                             
                             if (mention_id) {
-                                msgText = `✅ @${mention_id.split('@')[0]}, tu solicitud fue aprobada y generada por Sistemas. Aquí tienes tu archivo:`;
+                                msgText = `\`\`\`✅ ¡AGX generado exitosamente!\`\`\`\n\n@${mention_id.split('@')[0]}, aquí tienes tu archivo:`;
                             }
 
                             // Enviar el mensaje introductorio usando client.sendMessage (mucho más rápido y no requiere context)
