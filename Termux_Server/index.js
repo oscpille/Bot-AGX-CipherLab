@@ -166,7 +166,7 @@ client.on('message', async msg => {
         
         if (bodyLower === 'cancelar') {
             delete sessions[user_id];
-            await client.sendMessage(user_id, '🛑 Formulario cancelado.');
+            await client.sendMessage(user_id, '```🛑 Formulario cancelado.```');
             return;
         }
         
@@ -278,7 +278,7 @@ client.on('message', async msg => {
                 return;
             } else if (bodyLower === 'c' || bodyLower === 'c.' || bodyLower === 'cancelar') {
                 delete sessions[user_id];
-                await client.sendMessage(user_id, '🛑 Formulario cancelado.');
+                await client.sendMessage(user_id, '```🛑 Formulario cancelado.```');
                 return;
             } else {
                 await client.sendMessage(user_id, '`⚠️ Responde solo con a, b o c.`');
