@@ -96,6 +96,8 @@ function resetUserTimeout(user_id) {
 // ==========================================
 
 const puppeteerOptions = {
+    protocolTimeout: 300000,
+    timeout: 300000,
     args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
@@ -511,8 +513,22 @@ client.on('ready', () => {
 
                             // Iterar y enviar cada archivo generado
                             for (let archivo of data.archivos) {
-                                const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
-                                await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
+                                let intentos = 0;
+                                let enviado = false;
+                                while (!enviado && intentos < 3) {
+                                    try {
+                                        const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
+                                        await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
+                                        enviado = true;
+                                    } catch (err_envio) {
+                                        intentos++;
+                                        console.log(`⚠️ Fallo al enviar archivo (intento ${intentos}):`, err_envio.message);
+                                        if (intentos >= 3) {
+                                            throw err_envio; // Lanza al bloque catch principal
+                                        }
+                                        await new Promise(r => setTimeout(r, 5000));
+                                    }
+                                }
                             }
                             
                             let fileNames = data.archivos.map(a => a.file_name || 'AGX_Generado.agx').join(', ');
