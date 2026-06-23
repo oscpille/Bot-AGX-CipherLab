@@ -168,30 +168,17 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     configurar_boton_more(row_idx, data_type, prefijo_calculado, input_mark_char)
 
 def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
-    """Entra a la pantalla de Login, configura Properties y dibuja el Formato Visual."""
+    """Entra a la pantalla de Login y actualiza únicamente la línea 7 para ahorrar tiempo."""
     pyautogui.click(form_coords)
     time.sleep(0.40)
-    
-    configurar_propiedades_form("menu 2", next_form_id, "pass_down")
-    
-    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
-    time.sleep(0.14)
     
     if "scroll_tabla" in MAPA_UI["vista_form"]:
         pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
         pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left')
         time.sleep(0.14)
         
-    escribir_celda(0, "prompt", ">> L O G I N <<")
-    escribir_celda(1, "nil", "")
-    
-    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="usu#", input_mark_char="*")
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="nom#") 
-    
-    escribir_celda(4, "nil", "")
-    escribir_celda(5, "prompt", "TIPO DE CONTEO:")
+    # Solo rellenar la línea 7 (índice 6) de acuerdo a la plantilla vacía
     escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="tco#")
-    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nct#")
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
@@ -338,7 +325,7 @@ def abrir_programa_y_plantilla(modelo):
         if ventanas:
             titulo_exacto = ventanas[-1].title
             break
-        time.sleep(0.1)
+        time.sleep(0.5)
 
     if titulo_exacto:
         print(f"➤ Aplicando inyección de foco VBScript a: '{titulo_exacto}'")
@@ -354,7 +341,7 @@ def abrir_programa_y_plantilla(modelo):
         print("⚠️ Advertencia: No se encontró la ventana para forzar el foco.")
         
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
-    time.sleep(1.0) # Reducido de 3.5 a 1.0 para mayor velocidad
+    time.sleep(1.5) # Reducido de 3.5 a 1.0 para mayor velocidad
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
