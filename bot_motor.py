@@ -327,7 +327,7 @@ def abrir_programa_y_plantilla(modelo):
     
     print("➤ Buscando el título exacto de la ventana...")
     titulo_exacto = ""
-    for _ in range(20):
+    for _ in range(50):
         todas = gw.getAllWindows()
         ventanas = []
         for v in todas:
@@ -338,7 +338,7 @@ def abrir_programa_y_plantilla(modelo):
         if ventanas:
             titulo_exacto = ventanas[-1].title
             break
-        time.sleep(0.5)
+        time.sleep(0.1)
 
     if titulo_exacto:
         print(f"➤ Aplicando inyección de foco VBScript a: '{titulo_exacto}'")
@@ -354,7 +354,7 @@ def abrir_programa_y_plantilla(modelo):
         print("⚠️ Advertencia: No se encontró la ventana para forzar el foco.")
         
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
-    time.sleep(3.5) # Espera crucial para que la app Legacy termine de dibujar sus botones y ventana
+    time.sleep(1.0) # Reducido de 3.5 a 1.0 para mayor velocidad
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
