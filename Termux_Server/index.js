@@ -136,7 +136,7 @@ client.on('message', async msg => {
     const from_chat = msg.from; // El chat original donde se recibió el mensaje (grupo o privado)
 
     // Comando de inicio (más flexible)
-    const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx'];
+    const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx', 'solicitarte un agx', 'quisiera pedirte un agx'];
     if (triggerWords.includes(bodyLower)) {
         if (chat.isGroup) {
             // Etiquetar al usuario en el grupo (solo texto, sin options.mentions) para máxima estabilidad
@@ -151,7 +151,7 @@ client.on('message', async msg => {
             mention_id: chat.isGroup ? user_id : null 
         };
         
-        await client.sendMessage(user_id, '🤖 *¡Hola! Bienvenidx al creador de Solicitudes AGX.*\n\nTe haré unas preguntas rápidas.\n_Escribe *"Regresar"* en cualquier momento para corregir, o *"Cancelar"* para abortar)_');
+        await client.sendMessage(user_id, '🤖 Te damos la bienvenida al creador de Solicitudes AGX.\n\nPuede escribir en cualquier momento:\n\n"Regresar" - Para corregir la respuesta anterior.\n"Cancelar" - Para abortar el proceso.');
         await client.sendMessage(user_id, PREGUNTAS[0].msg);
         return;
     }
@@ -267,7 +267,7 @@ client.on('message', async msg => {
                 await client.sendMessage(user_id, '¡Listo! Tu solicitud se ha enviado. El bot la procesará en cuanto el equipo de Sistemas lo Apruebe.');
                 
                 const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
-                console.log(`➤ Nueva solicitud enfilada (Inventario: ${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}) [${fechaStr}]`);
+                console.log(`➤ [${fechaStr}] Nueva solicitud: "${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}"`);
 
                 // Limpiar sesión
                 delete sessions[user_id];
@@ -350,23 +350,56 @@ client.on('message', async msg => {
             let conteoVisual = ans['FLUJO OPERATIVO:'];
             if (conteoVisual === 'Ambos') conteoVisual = 'Pz x Pz y Volumen';
 
-            const msg1 = `Se ha recibido la siguiente información:\n
--Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}
--Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}
--Tipo: ${tipoVisual}
--Conteo: ${conteoVisual}`;
-
-            const msg2 = ans['DATOS REQUERIDOS'];
+            let reqLines = (ans['DATOS REQUERIDOS'] || '').split('\n');
+            let locs = [];
+            let dataGroups = [[]];
             
-            const msg3 = `Revisa bien la información brindada antes de enviarla.
+            for (let line of reqLines) {
+                let lower = line.trim().toLowerCase();
+                if (lower === '') {
+                    if (dataGroups[dataGroups.length - 1].length > 0) {
+                        dataGroups.push([]);
+                    }
+                    continue;
+                }
+                if (lower.includes('ubicacion') || lower.includes('ubicación') || lower.includes('marbete')) {
+                    locs.push(line.trim());
+                } else {
+                    dataGroups[dataGroups.length - 1].push(line.trim());
+                }
+            }
+            if (dataGroups.length > 0 && dataGroups[dataGroups.length - 1].length === 0) {
+                dataGroups.pop();
+            }
+            
+            let finalLocs = [];
+            let ubic = locs.find(l => l.toLowerCase().includes('ubic'));
+            let marb = locs.find(l => l.toLowerCase().includes('marbete'));
+            if (ubic) finalLocs.push(ubic);
+            if (marb) finalLocs.push(marb);
+            if (finalLocs.length === 0) finalLocs = locs; 
+            
+            let screenText = `> Datos Solicitados x Pantalla:\n`;
+            if (finalLocs.length > 0) {
+                for (let i = 0; i < finalLocs.length; i++) {
+                    screenText += `\n  Localización ${i + 1}/${finalLocs.length}:\n  - ${finalLocs[i]}\n`;
+                }
+            }
+            
+            let prefix = (ans['FLUJO OPERATIVO:'] === 'Volumen') ? 'Datos Vol' : 'Datos PzxPz';
+            if (dataGroups.length > 0) {
+                for (let i = 0; i < dataGroups.length; i++) {
+                    screenText += `\n  ${prefix} ${i + 1}/${dataGroups.length}:\n`;
+                    for (let item of dataGroups[i]) {
+                        screenText += `  - ${item}\n`;
+                    }
+                }
+            }
+            
+            const msgFinal = `Se ha recibido la siguiente información:\n\n> Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}\n> Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}\n> Tipo: ${tipoVisual}\n> Conteo: ${conteoVisual}\n${screenText}\nRevisa bien la información brindada antes de enviarla.\n\na. Enviar\nb. Corregir (regresa a la última pregunta)\nc. Cancelar (cancela la petición)`;
 
-a. Enviar
-b. Corregir (regresa a la última pregunta)
-c. Cancelar (cancela la petición)`;
-
-            await client.sendMessage(user_id, msg1);
-            await client.sendMessage(user_id, msg2);
-            await client.sendMessage(user_id, msg3);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await client.sendMessage(user_id, msgFinal);
         }
     }
 });
