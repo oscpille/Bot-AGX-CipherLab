@@ -5,7 +5,15 @@ import base64
 import requests
 import threading
 import tkinter as tk
-import tkinter as tk
+import logging
+import warnings
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+# Suprimir warnings visuales de Google Cloud
+warnings.filterwarnings("ignore", category=UserWarning, module="google.cloud")
+logging.getLogger("google").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
 from config import db
 from extractor_datos import procesar_solicitud
 from bot_motor import ejecutar_bot
@@ -103,7 +111,7 @@ def main():
             continue
             
         try:
-            docs = db.collection('solicitudes').where('ESTATUS', '==', 'PENDIENTE').get()
+            docs = db.collection('solicitudes').where(filter=FieldFilter('ESTATUS', '==', 'PENDIENTE')).get()
             todas_las_docs = list(docs)
             
             solicitudes_pendientes = []
