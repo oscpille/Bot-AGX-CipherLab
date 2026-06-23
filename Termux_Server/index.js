@@ -441,7 +441,8 @@ client.on('ready', () => {
                                 await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
                             }
                             
-                            console.log(`📤 Archivos enviados silenciosamente al chat: ${chat_id} para solicitud ${data.id_solicitud}`);
+                            let fileNames = data.archivos.map(a => a.file_name || 'AGX_Generado.agx').join(', ');
+                            console.log(`➤ Se enviaron ${data.archivos.length} archivos: ${fileNames}`);
                             
                             // Marcar como entregado para que no se reenvíe si se reinicia Termux
                             await change.doc.ref.update({ entregado_al_usuario: true });
