@@ -22,6 +22,14 @@ def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen, dict_u
         current_vars = []
         
         for v in variables:
+            if v.get('is_page_break'):
+                # Forzar salto de página explícito
+                if current_vars:
+                    paginas.append({'lookup_file': current_lookup, 'vars': current_vars})
+                    current_vars = []
+                    current_lookup = 'no_lookup'
+                continue
+
             l_file = v.get('lookup_file', 'no_lookup')
             
             # Si hay un conflicto de base de datos (ambas distintas de 'no_lookup' y diferentes entre sí)
@@ -127,9 +135,13 @@ def procesar_solicitud(solicitud):
         dict_ubicacion, dict_captura = {}, {}
         print("➤ Ejecutando Analizador Léxico (Regex)...")
         
+        page_break_count = 0
         for linea in str(solicitud['DATOS REQUERIDOS']).split('\n'):
             linea = linea.strip()
-            if not linea: continue
+            if not linea: 
+                dict_captura[f'__page_break_{page_break_count}__'] = {'is_page_break': True}
+                page_break_count += 1
+                continue
             
             linea_limpia = linea.lower().replace(',', '').replace('.', '').replace(';', '')
             match_nombre = re.match(r'^([^0-9:]+)', linea)
@@ -200,9 +212,8 @@ def procesar_solicitud(solicitud):
             else:
                 dict_captura[nombre_logico] = datos
 
-        prioridad_str = str(solicitud.get('¿QUÉ NIVEL DE PRIORIDAD DAREMOS?', '')).lower()
-        es_primero_ubicacion = "primero registrar ubicacion" in limpiar_texto(prioridad_str) or "primero registrar ubicación" in prioridad_str
-        regla_separar = "siguiente" in prioridad_str
+        es_primero_ubicacion = True
+        regla_separar = True
 
         loc_items = []
         v_marbete = next((v for k, v in dict_ubicacion.items() if 'marbete' in k), None)
@@ -232,6 +243,7 @@ def procesar_solicitud(solicitud):
         
         agrupacion_catalogos = {}
         for v in todas_las_vars:
+            if v.get('is_page_break'): continue
             if v.get('es_catalogo'):
                 id_cat = v.get('id_catalogo', '').strip()
                 if id_cat not in agrupacion_catalogos:
@@ -264,7 +276,7 @@ def procesar_solicitud(solicitud):
                     return p == "con"
             return False
             
-        vars_volumen = [v for v in listado_vars if not es_prefijo_con(v['nombre_pantalla'])]
+        vars_volumen = [v for v in listado_vars if v.get('is_page_break') or not es_prefijo_con(v.get('nombre_pantalla', ''))]
 
         plan_vuelo = asignar_piscina_forms(es_pieza, es_volumen, listado_vars, vars_volumen, dict_ubicacion, regla_separar)
 
@@ -311,7 +323,7 @@ def procesar_solicitud(solicitud):
             todas_las_variables.append(info_cantidad)
             
         for var in todas_las_variables:
-            if var is not None:
+            if var is not None and not var.get('is_page_break'):
                 if var.get('lookup_file') and var.get('lookup_file') != 'no_lookup':
                     l_file_str = "2nd Lookup File" if var['lookup_file'] == '2nd_lookup' else "3rd Lookup File"
                     indicativo_lookup = f" <- {l_file_str}"

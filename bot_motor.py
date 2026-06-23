@@ -382,7 +382,8 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx):
     
     fecha_hoy = datetime.now().strftime("%d-%m-%Y")
     version = 1
-    cliente_limpio = re.sub(r'[\\/*?:"<>|]', "", cliente).strip()
+    cliente_ascii = unicodedata.normalize('NFD', cliente).encode('ascii', 'ignore').decode('utf-8')
+    cliente_limpio = re.sub(r'[\\/*?:"<>|]', "", cliente_ascii).strip()
     
     while True:
         nombre_archivo = f"{cliente_limpio} {tipo_nombre} {modelo} {fecha_hoy} v{version}.AGX"

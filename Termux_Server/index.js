@@ -45,17 +45,10 @@ const PREGUNTAS = [
         key: 'FLUJO OPERATIVO:',
         msg: '*FLUJO OPERATIVO:*\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
     },
-    {
-        key: 'MARBETE Y UBICACIÓN',
-        msg: '*MARBETE Y UBICACIÓN*\n\n1. Solo Marbete\n2. Solo Ubicación\n3. Ambos\n\n_-Responde 1, 2 o 3-_'
-    },
-    {
-        key: '¿QUÉ NIVEL DE PRIORIDAD DAREMOS?',
-        msg: '*¿QUÉ NIVEL DE PRIORIDAD DAREMOS?*\n_Si los Marbetes tienen muchas Ubicaciones elige "a"._\n_Si las Ubicaciones tienen muchos Marbetes elige "b"._\n_La opción "c" te da la facilidad de registrar ambos en la misma pantalla._\n\na. Primero registrar Marbete y en la pantalla siguiente Ubicación.\n\nb. Primero registrar Ubicación y en la pantalla siguiente Marbetes.\n\nc. Registrar ambos en la misma pantalla.\n\n_-Responde "a", "b" o "c"-_'
-    },
+
     {
         key: 'DATOS REQUERIDOS',
-        msg: '*DATOS REQUERIDOS*\n_Ejemplo de Solicitud:_\n\n_Marbete: 5 num_\n_Ubicacion: 3-12_\n_SK: 5-15 alfanum Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6 decimal_\n_Lote: 0-11 alfanum_\n_Cantidad: 1-10_'
+        msg: '*DATOS REQUERIDOS*\n_Ejemplo de Solicitud:_\n\n_Marbete: 5 num_\n_Ubicacion: 3-12_\n_SK: 5-15 alfanum Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6 decimal_\n_Lote: 0-11 alfanum_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea._'
     }
 ];
 
@@ -182,10 +175,10 @@ client.on('message', async msg => {
                 await client.sendMessage(user_id, '⚠️ Ya estás en la primera pregunta. Si deseas salir, escribe *Cancelar*.');
                 return;
             } else {
-                session.step -= 1;
-                // Si regresamos a la pregunta de prioridad (paso 5), y esa pregunta se había saltado, regresamos una más (al paso 4)
-                if (session.step === 5 && session.answers['MARBETE Y UBICACIÓN'] !== 'Ambos') {
-                    session.step -= 1; 
+                if (session.awaitingWarning) {
+                    session.awaitingWarning = false;
+                } else {
+                    session.step -= 1;
                 }
                 await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
                 return;
@@ -217,9 +210,7 @@ client.on('message', async msg => {
                         "Cliente": ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:'] || "",
                         "Tipo": ans['¿DE QUÉ TIPO SERÁ?'] || "",
                         "Flujo_Operativo": ans['FLUJO OPERATIVO:'] || "",
-                        "Prioridad": ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || "",
-                        "Variables_Requeridas": ans['DATOS REQUERIDOS'] || "",
-                        "Marbete_Ubicacion": ans['MARBETE Y UBICACIÓN'] || ""
+                        "Variables_Requeridas": ans['DATOS REQUERIDOS'] || ""
                     },
                     "3_Metadatos_Internos": {
                         "id_solicitud": id_solicitud,
@@ -262,8 +253,8 @@ client.on('message', async msg => {
                 const modelo = ans['¿QUÉ MODELO DE AGX NECESITAS?'] || '';
                 const tipo = ans['¿DE QUÉ TIPO SERÁ?'] || '';
                 const conteo = ans['FLUJO OPERATIVO:'] || '';
-                const marbete = ans['MARBETE Y UBICACIÓN'] || '';
-                const prioridad = (ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || '').replace(/\n/g, ' ');
+                const marbete = 'N/A';
+                const prioridad = 'N/A';
                 const datosReq = (ans['DATOS REQUERIDOS'] || '').replace(/\n/g, ' - ');
                 const phone = user_id.split('@')[0];
                 const fechaRaw = new Date();
@@ -313,18 +304,31 @@ client.on('message', async msg => {
             else if (body === '3') bodyParsed = 'Ambos';
             else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
         }
-        else if (qKey === 'MARBETE Y UBICACIÓN') {
-            if (body === '1') bodyParsed = 'Solo Marbete';
-            else if (body === '2') bodyParsed = 'Solo Ubicación';
-            else if (body === '3') bodyParsed = 'Ambos';
-            else { await client.sendMessage(user_id, '⚠️ Responde solo con 1, 2 o 3.'); return; }
-        }
-        else if (qKey === '¿QUÉ NIVEL DE PRIORIDAD DAREMOS?') {
-            const low = body.toLowerCase();
-            if (low === 'a') bodyParsed = 'Primero registrar Marbete y en la pantalla siguiente Ubicación.';
-            else if (low === 'b') bodyParsed = 'Primero registrar Ubicación y en la pantalla siguiente Marbetes.';
-            else if (low === 'c') bodyParsed = 'Registrar ambos en la misma pantalla.';
-            else { await client.sendMessage(user_id, '⚠️ Responde solo con a, b o c.'); return; }
+        else if (qKey === 'DATOS REQUERIDOS') {
+            if (session.awaitingWarning) {
+                if (bodyLower === 'continuar') {
+                    bodyParsed = session.tempData;
+                    session.awaitingWarning = false;
+                } else {
+                    const hasLoc = bodyLower.includes('ubicacion') || bodyLower.includes('ubicación') || bodyLower.includes('marbete');
+                    if (!hasLoc) {
+                        session.tempData = bodyParsed;
+                        await client.sendMessage(user_id, '⚠️ Tu AGX sigue sin tener especificada una Ubicación o un Marbete.\n\n¿Deseas *Continuar* así, o enviar los datos corregidos de nuevo? (O escribe *Cancelar*)');
+                        return;
+                    } else {
+                        session.awaitingWarning = false;
+                        bodyParsed = body;
+                    }
+                }
+            } else {
+                const hasLoc = bodyLower.includes('ubicacion') || bodyLower.includes('ubicación') || bodyLower.includes('marbete');
+                if (!hasLoc) {
+                    session.awaitingWarning = true;
+                    session.tempData = bodyParsed;
+                    await client.sendMessage(user_id, '⚠️ Tu AGX no tiene especificada una Ubicación o un Marbete.\n\n¿Deseas *Continuar* así, o prefieres *Regresar* para enviar los datos corregidos?');
+                    return;
+                }
+            }
         }
 
         // Guardar la respuesta actual
@@ -333,14 +337,6 @@ client.on('message', async msg => {
         // Avanzar al siguiente paso
         session.step += 1;
 
-        // Salto condicional para PRIORIDAD (si en Q5 no eligieron "Ambos")
-        if (session.step === 5) {
-            if (session.answers['MARBETE Y UBICACIÓN'] !== 'Ambos') {
-                session.step += 1;
-                session.answers['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] = '';
-            }
-        }
-
         if (session.step < PREGUNTAS.length) {
             // Mandar siguiente pregunta
             await client.sendMessage(user_id, PREGUNTAS[session.step].msg);
@@ -348,20 +344,6 @@ client.on('message', async msg => {
             // Mandar los 3 mensajes de confirmación
             const ans = session.answers;
             
-            let marbeteUbicacionStr = '';
-            if (ans['MARBETE Y UBICACIÓN'] === 'Solo Marbete') marbeteUbicacionStr = 'solo Marbete';
-            else if (ans['MARBETE Y UBICACIÓN'] === 'Solo Ubicación') marbeteUbicacionStr = 'solo Ubicación';
-            else {
-                const prioridad = ans['¿QUÉ NIVEL DE PRIORIDAD DAREMOS?'] || '';
-                if (prioridad.includes('Primero registrar Marbete')) {
-                    marbeteUbicacionStr = 'Marbete y Ubicación (Primero Marbete)';
-                } else if (prioridad.includes('Primero registrar Ubicación')) {
-                    marbeteUbicacionStr = 'Marbete y Ubicación (Primero Ubicación)';
-                } else {
-                    marbeteUbicacionStr = 'Marbete y Ubicación en una pantalla';
-                }
-            }
-
             let tipoVisual = ans['¿DE QUÉ TIPO SERÁ?'];
             if (tipoVisual === 'Ambos') tipoVisual = 'Abierto y Cerrado';
             
@@ -372,8 +354,7 @@ client.on('message', async msg => {
 -Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}
 -Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}
 -Tipo: ${tipoVisual}
--Conteo: ${conteoVisual}
--Con ${marbeteUbicacionStr}`;
+-Conteo: ${conteoVisual}`;
 
             const msg2 = ans['DATOS REQUERIDOS'];
             
