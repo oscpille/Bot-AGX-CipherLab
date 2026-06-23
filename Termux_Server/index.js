@@ -306,6 +306,25 @@ client.on('message', async msg => {
                 // Respuesta final
                 await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada.```\n\n```Puedes volver a escribir ``` `Solicitud de AGX` ``` para solicitar un AGX nuevo las veces que quieras. Todos serán agregados a una "fila virtual"```');
                 
+                try {
+                    const serverState = await db.collection('configuracion').doc('estado_servidor').get();
+                    let isOffline = true;
+                    if (serverState.exists) {
+                        const data = serverState.data();
+                        const ultimo_latido = data.ultimo_latido || 0;
+                        const ahora = Date.now() / 1000;
+                        if (ahora - ultimo_latido <= 180) {
+                            isOffline = false;
+                        }
+                    }
+                    if (isOffline) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await client.sendMessage(user_id, '```⚠️ Nota: El servidor de Sistemas parece estar apagado o fuera de línea. Tu solicitud quedó en la "fila virtual" y se procesará automáticamente en cuanto el sistema regrese.```');
+                    }
+                } catch (e) {
+                    console.error("Error al verificar latido del servidor:", e);
+                }
+                
                 const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
                 console.log(`➤ [${fechaStr}] Nueva solicitud: "${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}"`);
 

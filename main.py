@@ -3,6 +3,7 @@ import os
 import time
 import base64
 import requests
+import threading
 import tkinter as tk
 import tkinter as tk
 from config import db
@@ -76,7 +77,19 @@ def preguntar_al_usuario(cantidad):
     return resultado[0]
 
 
+def actualizar_latido():
+    while True:
+        if db:
+            try:
+                db.collection('configuracion').document('estado_servidor').set({
+                    'ultimo_latido': time.time()
+                }, merge=True)
+            except Exception:
+                pass
+        time.sleep(60)
+
 def main():
+    threading.Thread(target=actualizar_latido, daemon=True).start()
     print("=====================================================")
     print("      ORQUESTADOR DE BOT AGX INICIADO (MODO VIGÍA)   ")
     print("=====================================================")
