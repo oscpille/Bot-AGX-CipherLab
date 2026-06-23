@@ -48,7 +48,7 @@ const PREGUNTAS = [
 
     {
         key: 'DATOS REQUERIDOS',
-        msg: '`DATOS REQUERIDOS`\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
+        msg: '`DATOS REQUERIDOS`\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SKU: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
     }
 ];
 
@@ -56,6 +56,35 @@ const PREGUNTAS = [
 // MÁQUINA DE ESTADOS (Manejo de Sesiones)
 // ==========================================
 const sessions = {};
+
+function clearUserTimeouts(session) {
+    if (!session) return;
+    if (session.warningTimeout) clearTimeout(session.warningTimeout);
+    if (session.cancelTimeout) clearTimeout(session.cancelTimeout);
+}
+
+function resetUserTimeout(user_id) {
+    const session = sessions[user_id];
+    if (!session) return;
+    
+    clearUserTimeouts(session);
+    
+    // Warning at 4 minutes 25 seconds (265,000 ms)
+    session.warningTimeout = setTimeout(async () => {
+        if (sessions[user_id]) {
+            await client.sendMessage(user_id, '🤖 `¿Hola, sigues ahí?`\n\n\n\n_La solicitud se cancelará en 30 segundos_');
+        }
+    }, 265000);
+    
+    // Cancel at 5 minutes (300,000 ms)
+    session.cancelTimeout = setTimeout(async () => {
+        if (sessions[user_id]) {
+            clearUserTimeouts(sessions[user_id]);
+            delete sessions[user_id];
+            await client.sendMessage(user_id, '```🛑 Se ha cancelado tu solicitud por inactividad. Si deseas volver a empezar, envía: ``` `\'Solicitar AGX\'.`');
+        }
+    }, 300000);
+}
 
 // ==========================================
 // WHATSAPP CLIENT
@@ -143,6 +172,8 @@ client.on('message', async msg => {
             await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
         }
         
+        if (sessions[user_id]) clearUserTimeouts(sessions[user_id]);
+        
         // Guardar sesión usando el ID privado del usuario, guardando el origen para la entrega final
         sessions[user_id] = { 
             step: 0, 
@@ -150,6 +181,8 @@ client.on('message', async msg => {
             chat_id: from_chat, 
             mention_id: chat.isGroup ? user_id : null 
         };
+        
+        resetUserTimeout(user_id);
         
         await client.sendMessage(user_id, '🤖 `Te damos la bienvenida al creador de Solicitudes AGX.`\n\n```Puede escribir en cualquier momento:```\n\n`Cancelar` -> _Para abortar el proceso._\n`Regresar` -> _Para corregir la respuesta anterior._');
         await client.sendMessage(user_id, PREGUNTAS[0].msg);
@@ -162,9 +195,11 @@ client.on('message', async msg => {
 
     // Si el usuario tiene una sesión activa (está en medio del formulario en su chat privado)
     if (sessions[user_id]) {
+        resetUserTimeout(user_id);
         const session = sessions[user_id];
         
         if (bodyLower === 'cancelar') {
+            clearUserTimeouts(sessions[user_id]);
             delete sessions[user_id];
             await client.sendMessage(user_id, '```🛑 Formulario cancelado.```');
             return;
@@ -172,7 +207,7 @@ client.on('message', async msg => {
         
         if (bodyLower === 'regresar') {
             if (session.step === 0) {
-                await client.sendMessage(user_id, '⚠️ Ya estás en la primera pregunta. Si deseas salir, escribe *Cancelar*.');
+                await client.sendMessage(user_id, '```⚠️ Ya estás en la primera pregunta. Si deseas salir, escribe``` `Cancelar`.');
                 return;
             } else {
                 if (session.awaitingWarning) {
@@ -264,12 +299,13 @@ client.on('message', async msg => {
                 fs.appendFileSync(HISTORIAL_FILE, logLine);
 
                 // Respuesta final
-                await client.sendMessage(user_id, '¡Listo! `Solicitud enviada.`');
+                await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada.```\n\n```Puedes volver a escribir ``` `Solicitud de AGX` ``` para solicitar un AGX nuevo las veces que quieras. Todos serán agregados a una "fila virtual"```');
                 
                 const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
                 console.log(`➤ [${fechaStr}] Nueva solicitud: "${session.answers['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}"`);
 
                 // Limpiar sesión
+                clearUserTimeouts(sessions[user_id]);
                 delete sessions[user_id];
                 return;
             } else if (bodyLower === 'b' || bodyLower === 'b.' || bodyLower === 'corregir') {
@@ -277,8 +313,9 @@ client.on('message', async msg => {
                 await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
                 return;
             } else if (bodyLower === 'c' || bodyLower === 'c.' || bodyLower === 'cancelar') {
+                clearUserTimeouts(sessions[user_id]);
                 delete sessions[user_id];
-                await client.sendMessage(user_id, '```🛑 Formulario cancelado.```');
+                await client.sendMessage(user_id, '```🛑 AGX cancelado.```');
                 return;
             } else {
                 await client.sendMessage(user_id, '`⚠️ Responde solo con a, b o c.`');
@@ -388,7 +425,7 @@ client.on('message', async msg => {
 
             if (finalLocs.length > 0) {
                 for (let i = 0; i < finalLocs.length; i++) {
-                    screenText += `\n\n\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
+                    screenText += `\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
                 }
             }
             
