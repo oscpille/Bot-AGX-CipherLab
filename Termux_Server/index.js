@@ -31,24 +31,24 @@ if (!fs.existsSync(HISTORIAL_FILE)) {
 const PREGUNTAS = [
     {
         key: '¿QUÉ MODELO DE AGX NECESITAS?',
-        msg: '¿QUÉ MODELO DE AGX NECESITAS?\n\n\n\n1. Modelo 8000\n2. Modelo 8200\n\n\n\n_-Responde: 1 o 2-_'
+        msg: '¿QUÉ MODELO DE AGX NECESITAS?\n\n1. Modelo 8000\n2. Modelo 8200\n\n_-Responde: 1 o 2-_'
     },
     {
         key: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:',
-        msg: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:\n\n\n\n_(Anfora, BAJAJ, biogrup, etc.)_'
+        msg: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:\n\n_(Anfora, BAJAJ, biogrup, etc.)_'
     },
     {
         key: '¿DE QUÉ TIPO SERÁ?',
-        msg: '¿DE QUÉ TIPO SERÁ?\n\n\n\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n\n\n_-Responde: 1, 2 o 3-_'
+        msg: '¿DE QUÉ TIPO SERÁ?\n\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_-Responde: 1, 2 o 3-_'
     },
     {
         key: 'FLUJO OPERATIVO:',
-        msg: 'FLUJO OPERATIVO:\n\n\n\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n\n\n_-Responde: 1, 2 o 3-_'
+        msg: 'FLUJO OPERATIVO:\n\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde: 1, 2 o 3-_'
     },
 
     {
         key: 'DATOS REQUERIDOS',
-        msg: 'DATOS REQUERIDOS\n\n\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
+        msg: 'DATOS REQUERIDOS\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
     }
 ];
 
@@ -151,7 +151,7 @@ client.on('message', async msg => {
             mention_id: chat.isGroup ? user_id : null 
         };
         
-        await client.sendMessage(user_id, '🤖 `Te damos la bienvenida al creador de Solicitudes AGX.`\n\n\n\n```Puede escribir en cualquier momento:```\n\n\n\n`Cancelar` -> _Para abortar el proceso._\n`Regresar` -> _Para corregir la respuesta anterior._');
+        await client.sendMessage(user_id, '🤖 `Te damos la bienvenida al creador de Solicitudes AGX.`\n\n```Puede escribir en cualquier momento:```\n\n`Cancelar` -> _Para abortar el proceso._\n`Regresar` -> _Para corregir la respuesta anterior._');
         await client.sendMessage(user_id, PREGUNTAS[0].msg);
         return;
     }
@@ -379,7 +379,7 @@ client.on('message', async msg => {
             if (marb) finalLocs.push(marb);
             if (finalLocs.length === 0) finalLocs = locs; 
             
-            let screenText = '`Se ha recibido la siguiente información:`\n\n\n\n';
+            let screenText = '`Se ha recibido la siguiente información:`\n\n';
             screenText += `- Inventario: ${ans['INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:']}\n`;
             screenText += `- Modelo: ${ans['¿QUÉ MODELO DE AGX NECESITAS?']}\n`;
             screenText += `- Tipo: ${tipoVisual}\n`;
@@ -388,14 +388,14 @@ client.on('message', async msg => {
 
             if (finalLocs.length > 0) {
                 for (let i = 0; i < finalLocs.length; i++) {
-                    screenText += `\n\n\n\n\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
+                    screenText += `\n\n\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
                 }
             }
             
             let prefix = (ans['FLUJO OPERATIVO:'] === 'Volumen') ? 'Datos Vol' : 'Datos PzxPz';
             if (dataGroups.length > 0) {
                 for (let i = 0; i < dataGroups.length; i++) {
-                    screenText += `\n\n\n\n\`\`\`Pantalla ${prefix} ${i + 1}/${dataGroups.length}:\`\`\`\n`;
+                    screenText += `\n\n\`\`\`Pantalla ${prefix} ${i + 1}/${dataGroups.length}:\`\`\`\n`;
                     for (let item of dataGroups[i]) {
                         screenText += `- ${item}\n`;
                     }
@@ -403,7 +403,7 @@ client.on('message', async msg => {
                 }
             }
             
-            const msgFinal = `${screenText}\n\n\n\n\`Revisa bien la información brindada antes de enviarla:\`\n\n\n\n\`a\`. *Enviar*\n\`b\`. *Regresar* _(regresa a la última pregunta)_\n\`c\`. *Cancelar* _(cancela la petición)_`;
+            const msgFinal = `${screenText}\n\n\`Revisa bien la información brindada antes de enviarla:\`\n\n\`a\`. *Enviar*\n\`b\`. *Regresar* _(regresa a la última pregunta)_\n\`c\`. *Cancelar* _(cancela la petición)_`;
 
             await new Promise(resolve => setTimeout(resolve, 2000));
             await client.sendMessage(user_id, msgFinal);
