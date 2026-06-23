@@ -238,4 +238,8 @@ def main():
         time.sleep(30) # Espera normal antes del siguiente chequeo
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n🛑 Bot detenido manualmente por el usuario. ¡Hasta pronto!")
+        sys.exit(0)
