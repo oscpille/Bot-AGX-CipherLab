@@ -177,8 +177,17 @@ def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
         pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left')
         time.sleep(0.14)
         
-    # Solo rellenar la línea 7 (índice 6) de acuerdo a la plantilla vacía
-    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="tco#")
+    # Solo rellenar la columna Prompt de la línea 7 (índice 6) de acuerdo a la plantilla vacía
+    columnas = MAPA_UI["vista_form"]["tabla"]["columnas_x"]
+    y_actual = MAPA_UI["vista_form"]["tabla"]["filas_y"][6]
+    
+    pyautogui.click(columnas["prompt"], y_actual)
+    time.sleep(0.03)
+    pyperclip.copy(quitar_acentos(tipo_conteo).upper())
+    time.sleep(0.03)
+    pyautogui.hotkey('ctrl', 'v')
+    time.sleep(0.03)
+    pyautogui.press('enter')
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
