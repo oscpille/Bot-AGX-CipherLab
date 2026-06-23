@@ -31,24 +31,24 @@ if (!fs.existsSync(HISTORIAL_FILE)) {
 const PREGUNTAS = [
     {
         key: '¿QUÉ MODELO DE AGX NECESITAS?',
-        msg: '¿QUÉ MODELO DE AGX NECESITAS?\n\n1. Modelo 8000\n2. Modelo 8200\n\n_-Responde: 1 o 2-_'
+        msg: '`¿QUÉ MODELO DE AGX NECESITAS?`\n\n1. Modelo 8000\n2. Modelo 8200\n\n_-Responde: `1` o `2`-_'
     },
     {
         key: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:',
-        msg: 'INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:\n\n_(Anfora, BAJAJ, biogrup, etc.)_'
+        msg: '`INGRESA EL NOMBRE DEL INVENTARIO A TRABAJAR:`\n\n_(Anfora, BAJAJ, biogrup, etc.)_'
     },
     {
         key: '¿DE QUÉ TIPO SERÁ?',
-        msg: '¿DE QUÉ TIPO SERÁ?\n\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_-Responde: 1, 2 o 3-_'
+        msg: '`¿DE QUÉ TIPO SERÁ?`\n\n_(Abierto es lo mismo que Forzado)_\n\n1. Abierto\n2. Cerrado\n3. Ambos\n\n_-Responde: `1`, `2` o `3`-_'
     },
     {
         key: 'FLUJO OPERATIVO:',
-        msg: 'FLUJO OPERATIVO:\n\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde: 1, 2 o 3-_'
+        msg: '`FLUJO OPERATIVO:`\n\n_(Tipo de Conteo. En caso de ser Gramaje seleccione Pieza x Pieza)_\n\n1. Pieza x Pieza\n2. Volúmen\n3. Ambos\n\n_-Responde: `1`, `2` o `3`-_'
     },
 
     {
         key: 'DATOS REQUERIDOS',
-        msg: 'DATOS REQUERIDOS\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
+        msg: '`DATOS REQUERIDOS`\n\n_Este es un Ejemplo de Solicitud:_\n\n_Ubicación: 3-12_\n_Marbete: 5_\n_Lote: 0-11_\n\n_SK: 5-15 Catálogo_\n_EAN: 3-15 Catálogo_\n_Kilos: 1-6_\n_Cantidad: 1-10_\n\n_Nota: Puedes separar grupos de pantallas usando un doble salto de línea. Sin embargo ten en cuenta que "Ubicación" y "Marbete" siempre irán cada uno en una pantalla y aparecerá primero el dato que pongas primero._'
     }
 ];
 
@@ -433,10 +433,10 @@ client.on('ready', () => {
                         
                         try {
                             let options = {};
-                            let msgText = '```✅ ¡AGX generado exitosamente!```\n\nAquí tienes tu archivo:';
+                            let msgText = '```✅ ¡AGX generado exitosamente!```';
                             
                             if (mention_id) {
-                                msgText = `\`\`\`✅ ¡AGX generado exitosamente!\`\`\`\n\n@${mention_id.split('@')[0]}, aquí tienes tu archivo:`;
+                                msgText = `\`\`\`✅ ¡AGX generado exitosamente!\`\`\``;
                             }
 
                             // Enviar el mensaje introductorio usando client.sendMessage (mucho más rápido y no requiere context)
