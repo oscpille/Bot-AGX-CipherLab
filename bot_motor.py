@@ -321,36 +321,47 @@ def abrir_programa_y_plantilla(modelo):
     import tempfile
     import subprocess
     
-    print("➤ Buscando el título exacto de la ventana...")
+    print("➤ Buscando y asegurando foco en la ventana de ForgeAG...")
     titulo_exacto = ""
     for _ in range(50):
         todas = gw.getAllWindows()
-        ventanas = []
-        for v in todas:
-            if not v.title: continue
-            if ("Forge" in v.title or modelo in v.title or "AGX" in v.title):
-                if not ("cmd.exe" in v.title.lower() or "orquestador" in v.title.lower() or "bot agx" in v.title.lower() or "powershell" in v.title.lower()):
-                    ventanas.append(v)
+        ventanas = [v for v in todas if v.title and "Forge AG" in v.title]
+        
         if ventanas:
-            titulo_exacto = ventanas[-1].title
-            break
+            ventana = ventanas[-1]
+            titulo_exacto = ventana.title
+            print(f"➤ Aplicando inyección de foco a: '{titulo_exacto}'")
+            
+            # Intentos agresivos de foco
+            try:
+                ventana.restore()
+                ventana.activate()
+            except Exception:
+                pass
+                
+            vbs_code = f'CreateObject("WScript.Shell").AppActivate "{titulo_exacto}"'
+            fd, path_vbs = tempfile.mkstemp(suffix=".vbs")
+            with open(fd, 'w', encoding='utf-8') as f:
+                f.write(vbs_code)
+            subprocess.run(["cscript.exe", "//Nologo", path_vbs])
+            os.remove(path_vbs)
+            
+            # Verificación del "Focus Lock"
+            time.sleep(0.5) # Esperar a que el S.O reaccione al VBScript
+            activa = gw.getActiveWindow()
+            if activa and "Forge AG" in activa.title:
+                print("✅ Foco confirmado exitosamente en ForgeAG.")
+                break
+            else:
+                print("⚠️ ForgeAG no tiene el foco principal. Reintentando...")
+        
         time.sleep(0.5)
 
-    if titulo_exacto:
-        print(f"➤ Aplicando inyección de foco VBScript a: '{titulo_exacto}'")
-        vbs_code = f'CreateObject("WScript.Shell").AppActivate "{titulo_exacto}"'
-        fd, path_vbs = tempfile.mkstemp(suffix=".vbs")
-        with open(fd, 'w', encoding='utf-8') as f:
-            f.write(vbs_code)
-        
-        # Ejecutar el script VBScript silenciosamente
-        subprocess.run(["cscript.exe", "//Nologo", path_vbs])
-        os.remove(path_vbs)
-    else:
+    if not titulo_exacto:
         print("⚠️ Advertencia: No se encontró la ventana para forzar el foco.")
         
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
-    time.sleep(1.5) # Reducido de 3.5 a 1.0 para mayor velocidad
+    time.sleep(2.0) # Ajustado a 2.0s por seguridad
 
     print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
     pyautogui.click(MAPA_UI["barra_superior"]["file"])

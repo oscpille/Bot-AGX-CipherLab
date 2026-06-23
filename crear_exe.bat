@@ -15,7 +15,7 @@ python -m pip install pyinstaller --quiet
 
 echo.
 echo 3. Creando el archivo EXE (esto puede tardar un minuto)...
-python -m PyInstaller --onefile --name "Bot_AGX_Orquestador" --hidden-import=mapeo_8000 --hidden-import=mapeo_8200 main.py
+python -m PyInstaller --onefile --name "AutomatizadorAGX" --hidden-import=mapeo_8000 --hidden-import=mapeo_8200 main.py
 
 echo.
 echo =============================================
