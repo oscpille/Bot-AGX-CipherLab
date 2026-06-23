@@ -18,11 +18,16 @@ try {
 
 const db = getFirestore();
 
-const HISTORIAL_FILE = './historial_agx.txt';
-
-// Crear historial si no existe
-if (!fs.existsSync(HISTORIAL_FILE)) {
-    fs.writeFileSync(HISTORIAL_FILE, "");
+function getHistorialFile() {
+    const fecha = new Date();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const anio = fecha.getFullYear();
+    const fileName = `./historial_agx_${mes}_${anio}.txt`;
+    
+    if (!fs.existsSync(fileName)) {
+        fs.writeFileSync(fileName, "");
+    }
+    return fileName;
 }
 
 // ==========================================
@@ -273,10 +278,11 @@ client.on('message', async msg => {
                 // Actualizar ans para el historial_agx.txt que lo usa más abajo
                 ans['id_solicitud'] = id_solicitud;
 
-                // Guardar en historial_agx.txt
+                // Guardar en historial rotativo
                 let nextId = 1;
-                if (fs.existsSync(HISTORIAL_FILE)) {
-                    const data = fs.readFileSync(HISTORIAL_FILE, 'utf8').trim().split('\n');
+                const currentHistorial = getHistorialFile();
+                if (fs.existsSync(currentHistorial)) {
+                    const data = fs.readFileSync(currentHistorial, 'utf8').trim().split('\n');
                     if (data.length > 0 && data[0] !== "") {
                         const lastLine = data[data.length - 1];
                         const parts = lastLine.split('|');
@@ -301,7 +307,7 @@ client.on('message', async msg => {
                 const fecha = fechaRaw.toLocaleDateString('es-MX');
                 const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
                 const logLine = `${paddedId}|${fecha}|${hora}|${inventario}|${modelo}|${tipo}|${conteo}|${marbete}|${prioridad}|${datosReq}|${phone}\n`;
-                fs.appendFileSync(HISTORIAL_FILE, logLine);
+                fs.appendFileSync(currentHistorial, logLine);
 
                 // Respuesta final
                 await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada.```\n\n```Puedes volver a escribir ``` `Solicitud de AGX` ``` para solicitar un AGX nuevo las veces que quieras. Todos serán agregados a una "fila virtual"```');

@@ -190,22 +190,28 @@ def main():
                         "file_name": file_name
                     })
                     
-                try:
-                    firebase_id = solicitud.get('firebase_id')
-                    if firebase_id and db:
-                        db.collection('solicitudes').document(firebase_id).set({
-                            '1_Estado_de_Orden': {
-                                'Estatus': 'COMPLETADO',
-                                'Entregado_al_usuario': False
-                            },
-                            '4_Archivos_Entregados': archivos_para_subir,
-                            'ESTATUS': 'COMPLETADO',
-                            'archivos': archivos_para_subir,
-                            'entregado_al_usuario': False
-                        }, merge=True)
-                        print(f"✅ Archivos subidos a la nube y cola actualizada.")
-                except Exception as req_e:
-                    print(f"⚠️ No se pudo subir el archivo a Firebase: {req_e}")
+                firebase_id = solicitud.get('firebase_id')
+                if firebase_id and db:
+                    subida_exitosa = False
+                    intentos = 0
+                    while not subida_exitosa:
+                        try:
+                            db.collection('solicitudes').document(firebase_id).set({
+                                '1_Estado_de_Orden': {
+                                    'Estatus': 'COMPLETADO',
+                                    'Entregado_al_usuario': False
+                                },
+                                '4_Archivos_Entregados': archivos_para_subir,
+                                'ESTATUS': 'COMPLETADO',
+                                'archivos': archivos_para_subir,
+                                'entregado_al_usuario': False
+                            }, merge=True)
+                            print(f"✅ Archivos subidos a la nube y cola actualizada.")
+                            subida_exitosa = True
+                        except Exception as req_e:
+                            intentos += 1
+                            print(f"⚠️ No se pudo subir el archivo a Firebase (Intento {intentos}). Reintentando en 10 segundos... Error: {req_e}")
+                            time.sleep(10)
                 
                 # Limpieza obligatoria post-ejecución (destrucción de instancia)
                 print("\n➤ Ejecutando purga del entorno ForgeAG (Taskkill)...")
