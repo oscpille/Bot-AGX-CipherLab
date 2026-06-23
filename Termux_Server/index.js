@@ -198,7 +198,12 @@ client.on('message', async msg => {
         resetUserTimeout(user_id);
         const session = sessions[user_id];
         
-        if (bodyLower === 'cancelar') {
+        if (msg.hasMedia) {
+            await client.sendMessage(user_id, '`⚠️ Por favor, responde solo con texto.`');
+            return;
+        }
+        
+        if (bodyLower === 'cancelar' || bodyLower === 'salir' || bodyLower === 'abortar') {
             clearUserTimeouts(sessions[user_id]);
             delete sessions[user_id];
             await client.sendMessage(user_id, '```🛑 Formulario cancelado.```');
@@ -215,7 +220,7 @@ client.on('message', async msg => {
                 } else {
                     session.step -= 1;
                 }
-                await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
+                await client.sendMessage(user_id, '```🔙 Regresando...```\n\n\n\n' + PREGUNTAS[session.step].msg);
                 return;
             }
         }
@@ -310,7 +315,7 @@ client.on('message', async msg => {
                 return;
             } else if (bodyLower === 'b' || bodyLower === 'b.' || bodyLower === 'corregir') {
                 session.step -= 1;
-                await client.sendMessage(user_id, '🔙 Regresando...\n\n' + PREGUNTAS[session.step].msg);
+                await client.sendMessage(user_id, '```🔙 Regresando...```\n\n\n\n' + PREGUNTAS[session.step].msg);
                 return;
             } else if (bodyLower === 'c' || bodyLower === 'c.' || bodyLower === 'cancelar') {
                 clearUserTimeouts(sessions[user_id]);
