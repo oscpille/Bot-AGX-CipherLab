@@ -457,7 +457,7 @@ client.on('message', async msg => {
 
             if (finalLocs.length > 0) {
                 for (let i = 0; i < finalLocs.length; i++) {
-                    screenText += `\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}`;
+                    screenText += `\`\`\`Pantalla Localización ${i + 1}/${finalLocs.length}:\`\`\`\n- ${finalLocs[i]}\n`;
                 }
             }
             
