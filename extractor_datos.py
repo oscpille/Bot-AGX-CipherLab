@@ -169,17 +169,17 @@ def procesar_solicitud(solicitud):
                 num_match = re.search(r'\b(\d+)\b', linea_limpia)
                 if num_match: min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
                 
-            tipo_bruto = "texto" 
+            tipo_bruto = "alfanumerico" 
             
             for t in ["alfanumerico", "alfanum", "numérico", "numerico", "num", "entero", "decimal", "texto", "letras", "lookup"]:
                 if t in linea_limpia: 
-                    tipo_bruto = "texto" if t in ["alfanumerico", "alfanum"] else t
+                    tipo_bruto = t
                     break
                     
             if "sku" in nombre_logico or "ubicacion" in nombre_logico:
-                tipo_bruto = "texto" 
+                tipo_bruto = "alfanumerico" 
             elif "marbete" in nombre_logico:
-                if "texto" not in linea_limpia and "letras" not in linea_limpia:
+                if "texto" not in linea_limpia and "letras" not in linea_limpia and "alfanum" not in linea_limpia:
                     tipo_bruto = "entero"
             elif "cant" in nombre_logico:
                 if "decim" in linea_limpia: 
@@ -196,8 +196,8 @@ def procesar_solicitud(solicitud):
                 es_catalogo = False
                 id_catalogo = ""
             
-            if "marbete" not in nombre_logico and not es_catalogo:
-                tipo_bruto = "texto"
+            if "marbete" not in nombre_logico and not es_catalogo and tipo_bruto not in ["entero", "numerico", "num", "decimal", "texto", "letras"]:
+                tipo_bruto = "alfanumerico"
             
             datos = {
                 'nombre_pantalla': nombre_original, 
