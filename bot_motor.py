@@ -189,6 +189,30 @@ def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
     time.sleep(0.03)
     pyautogui.press('enter')
 
+def crear_pantalla_login_secundaria(form_coords, tipo_conteo, next_form_id):
+    """Entra a la pantalla de Login Secundaria, configura Properties y dibuja el Formato Visual desde cero."""
+    pyautogui.click(form_coords)
+    time.sleep(0.40)
+    
+    configurar_propiedades_form("menu 2", next_form_id, "pass_down")
+    
+    pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["1st_lookup"])
+    time.sleep(0.14)
+    
+    if "scroll_tabla" in MAPA_UI["vista_form"]:
+        pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
+        pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left')
+        time.sleep(0.14)
+        
+    escribir_celda(0, "prompt", ">> L O G I N <<")
+    escribir_celda(1, "nil", "")
+    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="usu#", input_mark_char="*")
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="nom#") 
+    escribir_celda(4, "nil", "")
+    escribir_celda(5, "prompt", "TIPO DE CONTEO:")
+    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="tco#")
+    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nct#")
+
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
     props = MAPA_UI["vista_form"]["properties"]
@@ -557,7 +581,10 @@ def ejecutar_bot(datos):
         if es_pieza:
             p_route = plan_vuelo['pieza']
             print(f"\n➤ Construyendo Interfaz Gráfica de Piezas (Inicia Form {p_route['login']})...")
-            configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
+            if p_route['login'] == 1:
+                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
+            else:
+                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
             esc_retorno_datos = inyectar_localizaciones_formato(p_route, loc_items, "Pieza x Pieza")
             total_pags_p = len(p_route['datos'])
             idx_catalogo_p = 1
@@ -602,7 +629,10 @@ def ejecutar_bot(datos):
         if es_volumen:
             v_route = plan_vuelo['volumen']
             print(f"\n➤ Construyendo Interfaz Gráfica de Volumen (Inicia Form {v_route['login']})...")
-            configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
+            if v_route['login'] == 1:
+                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
+            else:
+                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
             esc_retorno_datos_v = inyectar_localizaciones_formato(v_route, loc_items, "Conteo x Volumen")
             total_pags_v = len(v_route['datos'])
             idx_catalogo_v = 1
