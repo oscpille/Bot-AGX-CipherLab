@@ -134,9 +134,20 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
     pyautogui.press('enter'); time.sleep(0.03)
     
     if prompt_text:
-        pyautogui.click(columnas["prompt"], y_actual); time.sleep(0.03)
-        pyperclip.copy(quitar_acentos(prompt_text).upper()); time.sleep(0.03)
-        pyautogui.hotkey('ctrl', 'v'); time.sleep(0.03)
+        pyautogui.click(columnas["prompt"], y_actual, clicks=2, interval=0.05)
+        time.sleep(0.1)
+        
+        texto_prompt = quitar_acentos(prompt_text).upper()
+        pyperclip.copy(texto_prompt)
+        time.sleep(0.1)
+        
+        pyautogui.hotkey('ctrl', 'v')
+        time.sleep(0.05)
+        
+        # Fallback en caso de que el portapapeles falle (Windows race condition)
+        if pyperclip.paste() != texto_prompt:
+            pyautogui.write(texto_prompt, interval=0.01)
+            time.sleep(0.05)
         
     if data_type.lower() != "lookup":
         if min_len:
