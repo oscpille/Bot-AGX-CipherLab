@@ -202,7 +202,7 @@ def procesar_solicitud(solicitud):
             datos = {
                 'nombre_pantalla': nombre_original, 
                 'longitud': min_max_final, 
-                'tipo': TRADUCCION_TIPOS.get(limpiar_texto(tipo_bruto), "alphameric"),
+                'tipo': TRADUCCION_TIPOS.get(limpiar_texto(tipo_bruto), "text"),
                 'es_catalogo': es_catalogo,
                 'id_catalogo': id_catalogo
             }
