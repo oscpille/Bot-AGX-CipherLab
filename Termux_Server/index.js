@@ -428,8 +428,49 @@ REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla d
                     await client.sendMessage(user_id, responseText);
                 }
             } catch(e) {
-                console.error(e);
-                await client.sendMessage(user_id, '⚠️ `Lo siento, los servidores de Inteligencia Artificial están saturados. Por favor, intenta de nuevo tu respuesta.`');
+                console.error("Error de IA (Posible cuota excedida):", e.message);
+                
+                // MODO DE EMERGENCIA (BYPASS)
+                // Si la IA falla, asumimos que el usuario escribió perfectamente y pasamos el texto crudo
+                session.datos.Datos = body;
+                session.pendingData = session.datos; 
+                session.step = 5;
+                
+                let datosDibujados = '';
+                const bloques = body.split(/\n\s*\n/).filter(b => b.trim() !== '');
+                let locBlocks = [];
+                let dataBlocks = [];
+                
+                bloques.forEach(bloque => {
+                    let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) {
+                        locBlocks.push(bloque.trim());
+                    } else {
+                        dataBlocks.push(bloque.trim());
+                    }
+                });
+                
+                locBlocks.forEach((b, i) => {
+                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n${b}\n`;
+                });
+                
+                dataBlocks.forEach((b, i) => {
+                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n${b}\n`;
+                });
+
+                let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
+                let displayFlujo = session.datos.Flujo === 'Ambos' ? 'Pz x Pz y Volumen' : session.datos.Flujo;
+
+                let screenText = '⚠️ `Modo de Emergencia: La IA está fuera de línea. Los datos no fueron limpiados ortográficamente.`\n\n';
+                screenText += '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
+                screenText += `- Inventario: ${session.datos.Inventario}\n`;
+                screenText += `- Modelo: ${session.datos.Modelo}\n`;
+                screenText += `- Tipo: ${displayTipo}\n`;
+                screenText += `- Conteo: ${displayFlujo}\n`;
+                screenText += `- Datos Requeridos:${datosDibujados}\n\n`;
+                screenText += `\`a\`. *Enviar*\n\`b\`. *Corregir* _(regresa a los datos requeridos)_\n\`c\`. *Cancelar*`;
+                
+                await client.sendMessage(user_id, screenText);
             }
             return;
         }
