@@ -176,13 +176,13 @@ def procesar_solicitud(solicitud):
                     tipo_bruto = t
                     break
                     
+            if "marbete" in nombre_logico:
+                tipo_bruto = "entero"
+            elif "ubicacion" in nombre_logico or "sku" in nombre_logico or "cant" in nombre_logico:
+                tipo_bruto = "texto"
+                
             if not tipo_bruto:
-                if "marbete" in nombre_logico:
-                    tipo_bruto = "entero"
-                elif "cant" in nombre_logico:
-                    tipo_bruto = "entero"
-                else:
-                    tipo_bruto = "texto"
+                tipo_bruto = "texto"
                     
             linea_limpia_sin_acentos = limpiar_texto(linea)
             match_cat = re.search(r'\b(catalogo|lookup|bd|base de datos)\b(.*)', linea_limpia_sin_acentos)
@@ -220,7 +220,7 @@ def procesar_solicitud(solicitud):
         elif v_ubicacion:
             loc_items = [v_ubicacion]
 
-        info_cantidad = {'tipo': 'integer', 'nombre_pantalla': 'Cantidad', 'longitud': '1-10'} 
+        info_cantidad = {'tipo': 'text', 'nombre_pantalla': 'Cantidad', 'longitud': '1-10'} 
         claves_a_borrar = []
         
         for k, v in dict_captura.items():
