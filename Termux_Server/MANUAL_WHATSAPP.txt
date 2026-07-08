@@ -43,6 +43,6 @@ Ubicacion 1-5 texto
 
 SKU 5-15 texto
 
-Mantén los renglones en blanco que el usuario haya dejado explícitamente. ¡ESTO ES MUY IMPORTANTE! Si el usuario separó dos campos con un renglón vacío (doble Enter), tú también DEBES imprimir ese renglón vacío en tu respuesta final. Nunca los agrupes.
+Si ves que el texto original del usuario contiene la palabra explícita [SALTO_DE_PANTALLA], ¡ESTO ES MUY IMPORTANTE! Tienes que conservar esa palabra EXACTAMENTE igual en el mismo lugar dentro de tu JSON de salida. NUNCA la borres ni la agrupes con otra cosa.
 
 [SYSTEM PROMPT FIN]

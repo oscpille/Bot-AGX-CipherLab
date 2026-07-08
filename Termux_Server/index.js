@@ -361,14 +361,16 @@ El usuario te pasará la lista cruda de los campos que desea capturar. Tu tarea 
   "Datos": "[Datos limpios]"
 }
 
-REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla de forma aislada. Por lo tanto, en el JSON final, SIEMPRE debes poner un doble salto de línea (\\n\\n) antes y después de ellos para separarlos del resto de datos.
-REGLA DE SALTOS MANUALES: Si el usuario dejó un renglón en blanco entre dos campos, TÚ TAMBIÉN DEBES dejar ese mismo renglón en blanco (\\n\\n) en tu respuesta. ¡NUNCA agrupes campos que el usuario separó explícitamente!`
+REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla aislada (usa doble salto de línea \n\n para separarlos).
+REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del usuario, DEBES imprimir esa misma palabra exacta en tu respuesta final para separar los datos. ¡NUNCA la borres!`
                 });
                 
                 const chatLimpieza = modelLimpiador.startChat({
                     history: session.chatHistoryLimpieza.map(h => ({role: h.role, parts:[{text: h.text}]}))
                 });
-                const result = await chatLimpieza.sendMessage(body);
+                
+                let bodyWithTokens = body.replace(/\n\s*\n/g, '\n[SALTO_DE_PANTALLA]\n');
+                const result = await chatLimpieza.sendMessage(bodyWithTokens);
                 const responseText = result.response.text().trim();
                 
                 session.chatHistoryLimpieza.push({role: 'user', text: body});
@@ -379,6 +381,7 @@ REGLA DE SALTOS MANUALES: Si el usuario dejó un renglón en blanco entre dos ca
                     try {
                         const parsed = JSON.parse(cleanedText);
                         if (parsed.status === 'COMPLETO') {
+                            parsed.Datos = parsed.Datos.replace(/\[SALTO_DE_PANTALLA\]/gi, '\n\n');
                             session.datos.Datos = parsed.Datos;
                             session.pendingData = session.datos; 
                             session.step = 5;
