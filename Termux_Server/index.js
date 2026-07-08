@@ -61,7 +61,7 @@ _Nota:_ \`Ubicación\` y \`Marbete\` siempre saltan solos cada uno en su propia 
 *Ejemplo de cómo enviarlos:*
 Marbete 1-5
 
-SKU 5-15 lookup
+SKU 5-15 catálogo
 Lote 5-20
 Estado 1-10
 
