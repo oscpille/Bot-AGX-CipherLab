@@ -43,6 +43,6 @@ Ubicacion 1-5 texto
 
 SKU 5-15 texto
 
-Mantén los renglones en blanco que el usuario haya dejado explícitamente (ya que representan saltos de pantalla forzados).
+Mantén los renglones en blanco que el usuario haya dejado explícitamente. ¡ESTO ES MUY IMPORTANTE! Si el usuario separó dos campos con un renglón vacío (doble Enter), tú también DEBES imprimir ese renglón vacío en tu respuesta final. Nunca los agrupes.
 
 [SYSTEM PROMPT FIN]

@@ -361,7 +361,8 @@ El usuario te pasará la lista cruda de los campos que desea capturar. Tu tarea 
   "Datos": "[Datos limpios]"
 }
 
-REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla de forma aislada. Por lo tanto, en el JSON final, SIEMPRE debes poner un doble salto de línea (\\n\\n) antes y después de ellos para separarlos del resto de datos. Respeta también los saltos de línea que el usuario te haya pedido explícitamente.`
+REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla de forma aislada. Por lo tanto, en el JSON final, SIEMPRE debes poner un doble salto de línea (\\n\\n) antes y después de ellos para separarlos del resto de datos.
+REGLA DE SALTOS MANUALES: Si el usuario dejó un renglón en blanco entre dos campos, TÚ TAMBIÉN DEBES dejar ese mismo renglón en blanco (\\n\\n) en tu respuesta. ¡NUNCA agrupes campos que el usuario separó explícitamente!`
                 });
                 
                 const chatLimpieza = modelLimpiador.startChat({
