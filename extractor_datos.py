@@ -278,20 +278,9 @@ def procesar_solicitud(solicitud):
         print(f"➤ Inventario para: {cliente}")
         print(f"➤ Tipo de Conteo : {txt_conteo}")
         
-        if len(loc_items) == 2:
-            if not regla_separar:
-                txt_loc = "c. Registrar ambos en la misma pantalla."
-            elif es_primero_ubicacion:
-                txt_loc = "b. Primero registrar Ubicación y en la pantalla siguiente Marbetes."
-            else:
-                txt_loc = "a. Primero registrar Marbete y en la pantalla siguiente Ubicación."
-            print(f"➤ Prioridad elegida: {txt_loc}")
-        elif len(loc_items) == 1:
-            print(f"➤ Localizaciones : Solo {loc_items[0]['nombre_pantalla']}")
-            
         print("➤ Datos interpretados por el bot:")
         
-        todas_las_variables = loc_items + list(dict_captura.values())
+        todas_las_variables = list(listado_vars)
         if es_volumen:
             todas_las_variables.append(info_cantidad)
             
@@ -312,10 +301,9 @@ def procesar_solicitud(solicitud):
             'cliente': cliente,
             'tipo_agx': tipo_agx,
             'plan_vuelo': plan_vuelo,
-            'loc_items': loc_items,
             'info_cantidad': info_cantidad,
             'multiplos_por_lookup': multiplos_por_lookup,
-            'dict_captura': dict_captura,
+            'dict_captura': {v.get('nombre_pantalla', f'var_{i}'): v for i, v in enumerate(listado_vars) if not v.get('is_page_break')},
             'id_solicitud': id_solicitud,
             'chat_id': chat_id,
             'mention_id': mention_id
