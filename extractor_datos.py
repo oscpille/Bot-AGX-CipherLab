@@ -9,7 +9,7 @@ def limpiar_texto(texto):
     texto_sin_acentos = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     return texto_sin_acentos.lower().strip()
 
-def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen, dict_ubicacion, separar_ubicacion):
+def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen):
     """Calcula matemáticamente y distribuye dinámicamente los 10 Forms agrupando por base de datos."""
     forms_disponibles = list(range(1, 11))
     rutas = {}
@@ -69,8 +69,6 @@ def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen, dict_u
         if es_pieza:
             rutas['pieza'] = {
                 'login': forms_disponibles.pop(0),
-                'loc1': forms_disponibles.pop(0),
-                'loc2': forms_disponibles.pop(0) if (separar_ubicacion and len(dict_ubicacion) > 1) else None,
                 'datos': []
             }
             for p in paginas_p:
@@ -83,8 +81,6 @@ def asignar_piscina_forms(es_pieza, es_volumen, vars_pieza, vars_volumen, dict_u
         if es_volumen:
             rutas['volumen'] = {
                 'login': forms_disponibles.pop(0),
-                'loc1': forms_disponibles.pop(0),
-                'loc2': forms_disponibles.pop(0) if (separar_ubicacion and len(dict_ubicacion) > 1) else None,
                 'datos': []
             }
             for p in paginas_v:
@@ -132,14 +128,14 @@ def procesar_solicitud(solicitud):
         es_pieza = "pieza" in flujo_crudo or "ambos" in flujo_crudo
         es_volumen = "volumen" in flujo_crudo or "ambos" in flujo_crudo
         
-        dict_ubicacion, dict_captura = {}, {}
+        todas_las_vars_dict = {}
         print("➤ Ejecutando Analizador Léxico (Regex)...")
         
         page_break_count = 0
         for linea in str(solicitud['DATOS REQUERIDOS']).split('\n'):
             linea = linea.strip()
             if not linea: 
-                dict_captura[f'__page_break_{page_break_count}__'] = {'is_page_break': True}
+                todas_las_vars_dict[f'__page_break_{page_break_count}__'] = {'is_page_break': True}
                 page_break_count += 1
                 continue
             
@@ -201,39 +197,22 @@ def procesar_solicitud(solicitud):
                 'id_catalogo': id_catalogo
             }
             
-            if "marbete" in nombre_logico or "ubicacion" in nombre_logico:
-                dict_ubicacion[nombre_logico] = datos
-            else:
-                dict_captura[nombre_logico] = datos
-
-        es_primero_ubicacion = True
-        regla_separar = True
-
-        loc_items = []
-        v_marbete = next((v for k, v in dict_ubicacion.items() if 'marbete' in k), None)
-        v_ubicacion = next((v for k, v in dict_ubicacion.items() if 'ubicacion' in k), None)
-
-        if v_marbete and v_ubicacion:
-            loc_items = [v_ubicacion, v_marbete] if es_primero_ubicacion else [v_marbete, v_ubicacion]
-        elif v_marbete:
-            loc_items = [v_marbete]
-        elif v_ubicacion:
-            loc_items = [v_ubicacion]
+            todas_las_vars_dict[nombre_logico] = datos
 
         info_cantidad = {'tipo': 'text', 'nombre_pantalla': 'Cantidad', 'longitud': '1-10'} 
         claves_a_borrar = []
         
-        for k, v in dict_captura.items():
+        for k, v in todas_las_vars_dict.items():
             if "cantidad" in k: 
                 info_cantidad = v  
                 info_cantidad['nombre_pantalla'] = 'Cantidad' 
                 claves_a_borrar.append(k)
                 
         for k in claves_a_borrar:
-            del dict_captura[k]
+            del todas_las_vars_dict[k]
 
-        todas_las_vars = list(dict_ubicacion.values()) + list(dict_captura.values())
-        listado_vars = list(dict_captura.values())
+        todas_las_vars = list(todas_las_vars_dict.values())
+        listado_vars = todas_las_vars
         
         agrupacion_catalogos = {}
         for v in todas_las_vars:
@@ -272,7 +251,7 @@ def procesar_solicitud(solicitud):
             
         vars_volumen = [v for v in listado_vars if v.get('is_page_break') or not es_prefijo_con(v.get('nombre_pantalla', ''))]
 
-        plan_vuelo = asignar_piscina_forms(es_pieza, es_volumen, listado_vars, vars_volumen, dict_ubicacion, regla_separar)
+        plan_vuelo = asignar_piscina_forms(es_pieza, es_volumen, listado_vars, vars_volumen)
 
         # =========================================================
         # CHECKLIST DE PRE-VUELO (CONFIRMACIÓN DE DATOS)

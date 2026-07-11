@@ -1,0 +1,60 @@
+-lm -ll -ng /*-lg */
+
+user.rel
+
+8200lib.lib
+c900ml.lib
+
+/*******************************************/
+/*  User could provide suitable values     */
+/*      to the following variables         */
+/*******************************************/
+MainStackSize = 0x001000;
+HeapSize      = 0x000100;
+MaxSysRamSize = 0x020000;
+
+/*********************************************/
+/*  Do not modify anything beyond this line  */
+/*********************************************/
+memory
+{
+    RAM_S    : org = 0x401000, len = 0x02F000
+    RAM      : org = 0x430000, len = 0x200000
+    ROM      : org = 0xc00000, len = 0x200000
+}
+
+sections
+{
+    code  org = 0xc00000 : {
+        *(f_head)
+        *(f_code)
+    } > ROM
+
+    area org = 0x430000 : {
+        . += MainStackSize;
+        . += HeapSize;
+        *(f_area)
+    } > RAM
+
+    data  org=org(code)+sizeof(code)  addr=org(area)+sizeof(area) : {
+        *(f_data)
+    } /* global variables with initial values */
+
+    RAM_OVERFLOW_CHECK org = org(area) +  MaxSysRamSize : {
+		. += 1;
+    } > RAM
+    
+    const org = org(data) + sizeof(data) : {
+        *(f_const)
+        *(f_tail)
+    } > ROM
+}
+
+ActualRamEnd   = (addr(data) + sizeof(data)+3)/4*4;
+ActualRamSize  	= ActualRamEnd - 0x430000 ;   /* long boundary */
+SysRamEnd      	= org(area) + MaxSysRamSize;   /* long boundary */
+DataRam        	= addr(data);
+HeapTop        	= org(area) + MainStackSize;
+
+/* End */
+

@@ -1,0 +1,78 @@
+/*******************************************/
+/*  8000 User Link File of Library V4.10   */
+/*  4MB SRAM is supported.                 */
+/*  Released on Feb 18, 2009               */
+/*******************************************/
+
+-lm -lg -ll
+
+user.rel
+
+8000lib.lib
+c900ml.lib
+
+/*******************************************/
+/*  User could provide suitable values     */
+/*      to the following variables         */
+/*******************************************/
+MainStackSize = 0x001000;
+HeapSize      = 0x000100;
+MaxSysRamSize = 0x020000;
+
+
+/*********************************************/
+/*  Do not modify anything beyond this line  */
+/*********************************************/
+memory
+{
+     IRAM: org = 0x001100, len = 0x000e00    /* 0x1000 - 0x10ff IntVec */
+                                            /* 0x1f00 - 0x1fff Stack */
+    RAM      : org = 0x605000, len = 0x3b000
+    ROM      : org = 0xe00000, len = 0x1e0000
+}
+
+sections
+{
+    code  org = 0xe00000 : {
+        *(f_head)
+        *(f_code)
+    } > ROM
+
+    area org = 0x605000 : {
+        . += MainStackSize;
+        . += HeapSize;
+        *(f_bcr)
+        *(f_area)
+    } > RAM
+
+    data  org=org(code)+sizeof(code)  addr=org(area)+sizeof(area) : {
+        *(f_data)
+    } /* global variables with initial values */
+
+    xcode org = org(data) + sizeof(data)  addr = addr(data) + sizeof(data) : {
+        *(f_xcode)      /* code reside on RAM */
+    }
+
+    RAM_OVERFLOW_CHECK org = org(area) +  MaxSysRamSize : {
+		. += 1;
+    } > RAM
+
+    icode org = org(xcode) + sizeof(xcode)  addr = 0x001100 : {
+        *(f_icode)      /* code reside on IRAM */
+    }
+
+    const org = org(icode) + sizeof(icode) : {
+        *(f_const)
+        *(f_tail)
+    } > ROM
+}
+
+ActualRamSize  = (addr(xcode) + sizeof(xcode)+3)/4*4 - 0x605000 ;   /* long boundary */
+SysRamEnd      = org(area) + MaxSysRamSize;   /* long boundary */
+DataRam        = addr(data);
+XCodeRam       = addr(xcode);
+ICodeRam       = addr(icode);
+HeapTop        = org(area) + MainStackSize;
+
+/* End */
+

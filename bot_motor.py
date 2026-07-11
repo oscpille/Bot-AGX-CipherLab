@@ -257,86 +257,6 @@ def configurar_propiedades_form(esc_id, next_id, record_tipo):
     pyautogui.press('enter')
     time.sleep(0.04)
 
-def inyectar_localizaciones_formato(route_dict, loc_items_list, tipo_conteo_texto):
-    """Dibuja dinámicamente las pantallas de localización (1 sola o separadas)."""
-    if route_dict.get('loc2') and len(loc_items_list) == 2:
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.26)
-        configurar_propiedades_form(route_dict['login'], route_dict['loc2'], "pass_down")
-        
-        if loc_items_list[0].get('es_catalogo'):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
-            
-        if "scroll_tabla" in MAPA_UI["vista_form"]:
-            pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
-            
-        escribir_celda(0, "prompt", "LOCALIZACION 1/2")
-        escribir_celda(1, "nil", "")
-        item1 = loc_items_list[0]
-        nf1 = 1 if item1.get('es_catalogo') else 0
-        escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], nf1, input_mark_char="_")
-        escribir_celda(3, "nil", "")
-        escribir_celda(4, "nil", "")
-        escribir_celda(5, "nil", "")
-        escribir_celda(6, "prompt", "TIPO DE CONTEO:")
-        escribir_celda(7, "prompt", tipo_conteo_texto)
-        
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc2']}"]); time.sleep(0.26)
-        configurar_propiedades_form(route_dict['loc1'], route_dict['datos'][0]['f_num'], "pass_down")
-        
-        if loc_items_list[1].get('es_catalogo'):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
-            
-        if "scroll_tabla" in MAPA_UI["vista_form"]:
-            pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
-            
-        escribir_celda(0, "prompt", "LOCALIZACION 2/2")
-        escribir_celda(1, "nil", "")
-        item2 = loc_items_list[1]
-        nf2 = 1 if item2.get('es_catalogo') else 0
-        escribir_celda(2, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], nf2, input_mark_char="_")
-        escribir_celda(3, "nil", "")
-        escribir_celda(4, "nil", "")
-        escribir_celda(5, "nil", "")
-        escribir_celda(6, "prompt", "TIPO DE CONTEO:")
-        escribir_celda(7, "prompt", tipo_conteo_texto)
-        return route_dict['loc2']
-        
-    else:
-        pyautogui.click(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{route_dict['loc1']}"]); time.sleep(0.26)
-        configurar_propiedades_form(route_dict['login'], route_dict['datos'][0]['f_num'], "pass_down")
-        
-        if any(item.get('es_catalogo') for item in loc_items_list):
-            pyautogui.click(MAPA_UI["vista_form"]["sub_menus"]["lookup"]["2nd_lookup"]); time.sleep(0.04)
-            
-        if "scroll_tabla" in MAPA_UI["vista_form"]:
-            pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
-            pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
-            
-        escribir_celda(0, "prompt", "LOCALIZACION 1/1")
-        escribir_celda(1, "nil", "")
-        
-        if len(loc_items_list) == 1:
-            item = loc_items_list[0]
-            nf = 1 if item.get('es_catalogo') else 0
-            escribir_celda(2, item['tipo'], f"{item['nombre_pantalla']}: ", item['longitud'].split('-')[0], item['longitud'].split('-')[1], nf, input_mark_char="_")
-            escribir_celda(3, "nil", "")
-            escribir_celda(4, "nil", "")
-            escribir_celda(5, "nil", "")
-        elif len(loc_items_list) == 2:
-            item1 = loc_items_list[0]
-            item2 = loc_items_list[1]
-            nf1 = 1 if item1.get('es_catalogo') else 0
-            nf2 = 1 if item2.get('es_catalogo') else 0
-            escribir_celda(2, item1['tipo'], f"{item1['nombre_pantalla']}: ", item1['longitud'].split('-')[0], item1['longitud'].split('-')[1], nf1, input_mark_char="_")
-            escribir_celda(3, "nil", "")
-            escribir_celda(4, item2['tipo'], f"{item2['nombre_pantalla']}: ", item2['longitud'].split('-')[0], item2['longitud'].split('-')[1], nf2, input_mark_char="_")
-            escribir_celda(5, "nil", "")
-            
-        escribir_celda(6, "prompt", "TIPO DE CONTEO:")
-        escribir_celda(7, "prompt", tipo_conteo_texto)
-        return route_dict['loc1']
 
 def abrir_programa_y_plantilla(modelo):
     """Abre el acceso directo del modelo y carga la plantilla .AGX desde File -> Open."""
@@ -457,7 +377,6 @@ def ejecutar_bot(datos):
     tipo_agx = datos['tipo_agx']
     telefono = datos.get('telefono', '')
     plan_vuelo = datos['plan_vuelo']
-    loc_items = datos['loc_items']
     info_cantidad = datos['info_cantidad']
     multiplos_por_lookup = datos.get('multiplos_por_lookup', {})
     dict_captura = datos['dict_captura']
@@ -593,10 +512,10 @@ def ejecutar_bot(datos):
             p_route = plan_vuelo['pieza']
             print(f"\n➤ Construyendo Interfaz Gráfica de Piezas (Inicia Form {p_route['login']})...")
             if p_route['login'] == 1:
-                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
+                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['datos'][0]['f_num'])
             else:
-                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['loc1'])
-            esc_retorno_datos = inyectar_localizaciones_formato(p_route, loc_items, "Pieza x Pieza")
+                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['datos'][0]['f_num'])
+            esc_retorno_datos = p_route['login']
             total_pags_p = len(p_route['datos'])
             idx_catalogo_p = 1
             for idx, pagina_data in enumerate(p_route['datos']):
@@ -641,10 +560,10 @@ def ejecutar_bot(datos):
             v_route = plan_vuelo['volumen']
             print(f"\n➤ Construyendo Interfaz Gráfica de Volumen (Inicia Form {v_route['login']})...")
             if v_route['login'] == 1:
-                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
+                configurar_1st_lookup(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['datos'][0]['f_num'])
             else:
-                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['loc1'])
-            esc_retorno_datos_v = inyectar_localizaciones_formato(v_route, loc_items, "Conteo x Volumen")
+                crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['datos'][0]['f_num'])
+            esc_retorno_datos_v = v_route['login']
             total_pags_v = len(v_route['datos'])
             idx_catalogo_v = 1
             for idx, pagina_data in enumerate(v_route['datos']):

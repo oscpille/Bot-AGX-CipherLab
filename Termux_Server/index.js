@@ -56,10 +56,11 @@ const Q_TIPO = '¿De qué tipo será?\n_Forzado es igual a Abierto._\n\n`1`. Abi
 const Q_FLUJO = '¿Cuál será el Flujo Operativo (Conteo)?\n\n`1`. Pieza x Pieza.\n`2`. Volumen.\n`3`. Ambos.';
 const Q_DATOS = `Finalmente, envíame la lista de Datos Requeridos.
 
-_Nota:_ \`Ubicación\` y \`Marbete\` siempre saltan solos cada uno en su propia pantalla. Si \`Cantidad\` no tiene una longitud definida, siempre se asume un rango de 1-10 numérico y por defecto siempre va incluida en los datos del flujo de Volumen. Para forzar un salto de pantalla en tus datos, simplemente deja un renglón en blanco.
+_Nota:_ Si \`Cantidad\` no tiene una longitud definida, siempre se asume un rango de 1-10 numérico y por defecto siempre va incluida en los datos del flujo de Volumen. Para forzar un salto de pantalla en tus datos, simplemente deja un renglón en blanco.
 
 *Ejemplo de cómo enviarlos:*
-Marbete 1-5
+Ubicación
+Caja 1-5
 
 SKU 5-15 catálogo
 Lote 5-20
@@ -361,7 +362,6 @@ El usuario te pasará la lista cruda de los campos que desea capturar. Tu tarea 
   "Datos": "[Datos limpios]"
 }
 
-REGLA DE PANTALLAS: "Ubicación" y "Marbete" SIEMPRE van en su propia pantalla aislada (usa doble salto de línea \n\n para separarlos).
 REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del usuario, DEBES imprimir esa misma palabra exacta en tu respuesta final para separar los datos. ¡NUNCA la borres!`
                 });
                 
@@ -442,24 +442,28 @@ REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del 
                 
                 let datosDibujados = '';
                 const bloques = body.split(/\n\s*\n/).filter(b => b.trim() !== '');
-                let locBlocks = [];
-                let dataBlocks = [];
+                
+                let locTotal = 0;
+                let dataTotal = 0;
+                
+                bloques.forEach(bloque => {
+                    let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) locTotal++;
+                    else dataTotal++;
+                });
+                
+                let locCurrent = 1;
+                let dataCurrent = 1;
                 
                 bloques.forEach(bloque => {
                     let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) {
-                        locBlocks.push(bloque.trim());
+                        datosDibujados += `\n📺 *Pantalla Localización ${locCurrent}/${locTotal}*\n${bloque.trim()}\n`;
+                        locCurrent++;
                     } else {
-                        dataBlocks.push(bloque.trim());
+                        datosDibujados += `\n📺 *Pantalla Datos ${dataCurrent}/${dataTotal}*\n${bloque.trim()}\n`;
+                        dataCurrent++;
                     }
-                });
-                
-                locBlocks.forEach((b, i) => {
-                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n${b}\n`;
-                });
-                
-                dataBlocks.forEach((b, i) => {
-                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n${b}\n`;
                 });
 
                 let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
