@@ -32,7 +32,7 @@ DICCIONARIO_PREFIJOS = {
     # cin
     "codigo interno": "cin", "codigo cliente": "cin", "clave": "cin", "interno": "cin",
     # des
-    "descripcion de articulo": "des", "descripcion": "des",
+    "descripcion de articulo": "des", "descripcion": "des", "descrip": "des",
     # ter
     "id terminal": "ter", "ns del scaner": "ter", "scanner": "ter", "escaner": "ter", "terminal": "ter",
     # mca, mod, lot, mar, tal, caj, are, col

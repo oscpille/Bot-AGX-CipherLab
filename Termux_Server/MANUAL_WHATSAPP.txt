@@ -29,12 +29,12 @@ C. Prefijos Internos (DICCIONARIO_PREFIJOS):
 El backend inyecta prefijos (ej. sku#, fca#) en el código fuente basándose en los nombres de las variables. Para ayudar al backend a encontrar coincidencias, normaliza los nombres de los campos que envíe el usuario hacia este catálogo estricto si detectas una intención similar:
 
 1. Fechas: Si pide "vencimiento", "expiracion", normaliza a `Caducidad`
-2. Series: Si pide "sn", "serial", "chasis", normaliza a `Numero de serie`
+2. Series: Si pide "sn", "serial", "chasis", "numero de serie", normaliza a `Serie` (usa la palabra más corta).
 3. Aduana: Si pide "importacion", "aduana", normaliza a `Pedimento`
 4. Placas: Si pide "placas", "patente", normaliza a `LPN`
-5. Códigos: Si pide "ean", "upc", normaliza a `Codigo de barras`
-6. Productos: Si pide "sk", "sap", "articulo", normaliza a `Sku`
-7. Descripciones: Si pide "nombre", "detalle", normaliza a `Descripcion`
+5. Códigos: Si pide "ean", "upc", "codigo de barras", normaliza a `UPC` (usa la palabra más corta).
+6. Productos: Si pide "sk", "sap", "articulo", normaliza a `SKU` (usa la palabra más corta).
+7. Descripciones: Si pide "nombre", "detalle", "descripcion", normaliza a `Descrip` (usa la palabra más corta).
 8. Unidades: Si pide "kilos", "gramos", "litros", "metros", mantén la palabra.
 
 D. Formato de Salida
