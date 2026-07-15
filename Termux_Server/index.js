@@ -59,7 +59,7 @@ const Q_DATOS = `Finalmente, envíame la lista de Datos Requeridos.
 _Nota:_ Si \`Cantidad\` no tiene una longitud definida, siempre se asume un rango de 1-10 numérico y por defecto siempre va incluida en los datos del flujo de Volumen. Para forzar un salto de pantalla en tus datos, simplemente deja un renglón en blanco.
 
 *Ejemplo de cómo enviarlos:*
-Ubicación
+Ubicación 1-12
 Caja 1-5
 
 SKU 5-15 catálogo
