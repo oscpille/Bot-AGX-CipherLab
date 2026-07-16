@@ -539,7 +539,21 @@ def ejecutar_bot(datos):
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
                     pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
-                escribir_celda(0, "prompt", f"DATOS PZxPZ {idx+1}/{total_pags_p}")
+                
+                # Determinar si es pantalla de Localización o de Datos
+                es_pantalla_loc = any(x.lower() in v_info['nombre_pantalla'].lower() for v_info in rebanada for x in ['ubicacion', 'ubicación', 'marbete'])
+                
+                if es_pantalla_loc:
+                    # Encontrar conteo actual de locs
+                    locs_hasta_ahora = sum(1 for i in range(idx + 1) if any(x.lower() in v['nombre_pantalla'].lower() for v in p_route['datos'][i]['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    tot_locs = sum(1 for pg in p_route['datos'] if any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    prompt_title = f"LOCALIZACION {locs_hasta_ahora}/{tot_locs}"
+                else:
+                    dats_hasta_ahora = sum(1 for i in range(idx + 1) if not any(x.lower() in v['nombre_pantalla'].lower() for v in p_route['datos'][i]['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    tot_dats = sum(1 for pg in p_route['datos'] if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    prompt_title = f"DATOS PZxPZ {dats_hasta_ahora}/{tot_dats}"
+                    
+                escribir_celda(0, "prompt", prompt_title)
                 
                 for r_idx, v_info in enumerate(rebanada):
                     if v_info.get('es_catalogo'):
@@ -587,7 +601,21 @@ def ejecutar_bot(datos):
                 if "scroll_tabla" in MAPA_UI["vista_form"]:
                     pyautogui.moveTo(MAPA_UI["vista_form"]["scroll_tabla"]["origen"])
                     pyautogui.dragTo(MAPA_UI["vista_form"]["scroll_tabla"]["destino"], duration=0.28, button='left'); time.sleep(0.14)
-                escribir_celda(0, "prompt", f"CONTEO X VOL {idx+1}/{total_pags_v}")
+                
+                # Determinar si es pantalla de Localización o de Datos
+                es_pantalla_loc = any(x.lower() in v_info['nombre_pantalla'].lower() for v_info in rebanada for x in ['ubicacion', 'ubicación', 'marbete'])
+                
+                if es_pantalla_loc:
+                    # Encontrar conteo actual de locs
+                    locs_hasta_ahora = sum(1 for i in range(idx + 1) if any(x.lower() in v['nombre_pantalla'].lower() for v in v_route['datos'][i]['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    tot_locs = sum(1 for pg in v_route['datos'] if any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    prompt_title = f"LOCALIZACION {locs_hasta_ahora}/{tot_locs}"
+                else:
+                    dats_hasta_ahora = sum(1 for i in range(idx + 1) if not any(x.lower() in v['nombre_pantalla'].lower() for v in v_route['datos'][i]['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    tot_dats = sum(1 for pg in v_route['datos'] if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']))
+                    prompt_title = f"CONTEO X VOL {dats_hasta_ahora}/{tot_dats}"
+                    
+                escribir_celda(0, "prompt", prompt_title)
                 
                 for r_idx, v_info in enumerate(rebanada):
                     if v_info.get('es_catalogo'):
