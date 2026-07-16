@@ -285,8 +285,8 @@ client.on('message_create', async msg => {
                 
                 if (session.step === 0) resText += Q_MODELO;
                 else if (session.step === 1) resText += Q_INVENTARIO;
-                else if (session.step === 2) resText += Q_TIPO;
-                else if (session.step === 3) resText += Q_FLUJO;
+                else if (session.step === 2) resText += Q_FLUJO;
+                else if (session.step === 3) resText += Q_TIPO;
                 else if (session.step === 4) resText += Q_DATOS;
                 
                 await client.sendMessage(user_id, resText);
@@ -306,8 +306,8 @@ client.on('message_create', async msg => {
             }
             if (session.step === 0) await client.sendMessage(user_id, Q_MODELO);
             else if (session.step === 1) await client.sendMessage(user_id, Q_INVENTARIO);
-            else if (session.step === 2) await client.sendMessage(user_id, Q_TIPO);
-            else if (session.step === 3) await client.sendMessage(user_id, Q_FLUJO);
+            else if (session.step === 2) await client.sendMessage(user_id, Q_FLUJO);
+            else if (session.step === 3) await client.sendMessage(user_id, Q_TIPO);
             else if (session.step === 4) await client.sendMessage(user_id, Q_DATOS);
             return;
         }
@@ -324,20 +324,20 @@ client.on('message_create', async msg => {
         else if (session.step === 1) {
             session.datos.Inventario = msg.body.trim();
             session.step = 2;
-            await client.sendMessage(user_id, Q_TIPO);
+            await client.sendMessage(user_id, Q_FLUJO);
             return;
         }
         else if (session.step === 2) {
-            if (bodyLower === '1' || bodyLower === 'abierto') { session.datos.Tipo = 'Abierto'; session.step = 3; await client.sendMessage(user_id, Q_FLUJO); }
-            else if (bodyLower === '2' || bodyLower === 'cerrado') { session.datos.Tipo = 'Cerrado'; session.step = 3; await client.sendMessage(user_id, Q_FLUJO); }
-            else if (bodyLower === '3' || bodyLower === 'ambos') { session.datos.Tipo = 'Ambos'; session.step = 3; await client.sendMessage(user_id, Q_FLUJO); }
+            if (bodyLower === '1' || bodyLower === 'pieza x pieza' || bodyLower === 'pieza') { session.datos.Flujo = 'Pieza x Pieza'; session.step = 3; await client.sendMessage(user_id, Q_TIPO); }
+            else if (bodyLower === '2' || bodyLower === 'volumen') { session.datos.Flujo = 'Volumen'; session.step = 3; await client.sendMessage(user_id, Q_TIPO); }
+            else if (bodyLower === '3' || bodyLower === 'ambos') { session.datos.Flujo = 'Ambos'; session.step = 3; await client.sendMessage(user_id, Q_TIPO); }
             else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1, 2 o 3.`'); }
             return;
         }
         else if (session.step === 3) {
-            if (bodyLower === '1' || bodyLower === 'pieza x pieza' || bodyLower === 'pieza') { session.datos.Flujo = 'Pieza x Pieza'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
-            else if (bodyLower === '2' || bodyLower === 'volumen') { session.datos.Flujo = 'Volumen'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
-            else if (bodyLower === '3' || bodyLower === 'ambos') { session.datos.Flujo = 'Ambos'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
+            if (bodyLower === '1' || bodyLower === 'abierto') { session.datos.Tipo = 'Abierto'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
+            else if (bodyLower === '2' || bodyLower === 'cerrado') { session.datos.Tipo = 'Cerrado'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
+            else if (bodyLower === '3' || bodyLower === 'ambos') { session.datos.Tipo = 'Ambos'; session.step = 4; await client.sendMessage(user_id, Q_DATOS); }
             else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1, 2 o 3.`'); }
             return;
         }
@@ -417,8 +417,8 @@ REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del 
                             let screenText = '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
                             screenText += `- Inventario: ${session.datos.Inventario}\n`;
                             screenText += `- Modelo: ${session.datos.Modelo}\n`;
-                            screenText += `- Tipo: ${displayTipo}\n`;
                             screenText += `- Conteo: ${displayFlujo}\n`;
+                            screenText += `- Tipo: ${displayTipo}\n`;
                             screenText += `- Datos Requeridos:${datosDibujados}\n\n`;
                             screenText += `\`a\`. *Enviar*\n\`b\`. *Corregir* _(regresa a los datos requeridos)_\n\`c\`. *Cancelar*`;
                             await client.sendMessage(user_id, screenText);
@@ -473,8 +473,8 @@ REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del 
                 screenText += '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
                 screenText += `- Inventario: ${session.datos.Inventario}\n`;
                 screenText += `- Modelo: ${session.datos.Modelo}\n`;
-                screenText += `- Tipo: ${displayTipo}\n`;
                 screenText += `- Conteo: ${displayFlujo}\n`;
+                screenText += `- Tipo: ${displayTipo}\n`;
                 screenText += `- Datos Requeridos:${datosDibujados}\n\n`;
                 screenText += `\`a\`. *Enviar*\n\`b\`. *Corregir* _(regresa a los datos requeridos)_\n\`c\`. *Cancelar*`;
                 
