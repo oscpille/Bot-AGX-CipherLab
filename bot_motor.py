@@ -407,9 +407,8 @@ def ejecutar_bot(datos):
             print("\n➤ Entorno 8000: Desplegando solo Menu...")
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
 
-        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.40)
-        
-        lineas_cliente = textwrap.wrap(cliente, width=16, break_long_words=True)
+        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]);        # Usar wrap para dividir el string en líneas de 16 caracteres máximo
+        lineas_cliente = textwrap.wrap(cliente.upper(), width=16, break_long_words=True)
         coords_items = [MAPA_UI["vista_menu"]["items"]["item_5"]["coords"], MAPA_UI["vista_menu"]["items"]["item_6"]["coords"], MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]]
         dicc_nexts = [MAPA_UI["vista_menu"]["next_dropdowns"]["next_5"], MAPA_UI["vista_menu"]["next_dropdowns"]["next_6"], MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]]
         
@@ -527,7 +526,15 @@ def ejecutar_bot(datos):
                 es_ultima = (idx == total_pags_p - 1)
                 
                 p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]['f_num']
-                p_next = p_route['datos'][0]['f_num'] if es_ultima else p_route['datos'][idx + 1]['f_num'] 
+                if es_ultima:
+                    first_data_f_num = p_route['datos'][0]['f_num']
+                    for pg in p_route['datos']:
+                        if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
+                            first_data_f_num = pg['f_num']
+                            break
+                    p_next = first_data_f_num
+                else:
+                    p_next = p_route['datos'][idx + 1]['f_num'] 
                 p_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(p_esc, p_next, p_record)
                 
@@ -561,7 +568,7 @@ def ejecutar_bot(datos):
                         idx_catalogo_p += 1
                     else:
                         num_field = 0
-                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
+                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla'].upper()}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     escribir_celda(6, "pause", "[ENTER] O [ESC]")
@@ -589,7 +596,15 @@ def ejecutar_bot(datos):
                 es_ultima = (idx == total_pags_v - 1)
                 
                 v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]['f_num']
-                v_next = v_route['datos'][0]['f_num'] if es_ultima else v_route['datos'][idx + 1]['f_num'] 
+                if es_ultima:
+                    first_data_f_num = v_route['datos'][0]['f_num']
+                    for pg in v_route['datos']:
+                        if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
+                            first_data_f_num = pg['f_num']
+                            break
+                    v_next = first_data_f_num
+                else:
+                    v_next = v_route['datos'][idx + 1]['f_num']
                 v_record = "save" if es_ultima else "pass_down"
                 configurar_propiedades_form(v_esc, v_next, v_record)
                 
@@ -623,7 +638,7 @@ def ejecutar_bot(datos):
                         idx_catalogo_v += 1
                     else:
                         num_field = 0
-                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla']}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
+                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla'].upper()}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     c_min, c_max = info_cantidad['longitud'].split('-')
