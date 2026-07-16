@@ -211,13 +211,15 @@ client.on('message_create', async msg => {
     // LÓGICA PRINCIPAL DEL BOT 
     // ------------------------------------------
     const user_id = msg.author || msg.from;
-    let chat;
+    let chat = null;
     try {
         chat = await msg.getChat();
     } catch (err) {
         console.error("⚠️ Error obteniendo el chat:", err.message);
-        return;
+        // Continuamos sin chat object. Usaremos msg.from para deducir info.
     }
+    
+    const isGroup = chat ? chat.isGroup : (msg.from && msg.from.includes('@g.us'));
     const body = msg.body.trim();
     const bodyLower = body.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
@@ -231,8 +233,8 @@ client.on('message_create', async msg => {
 
     const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx', 'solicitarte un agx', 'quisiera pedirte un agx'];
     if (triggerWords.includes(bodyLower)) {
-        if (chat && chat.isGroup) {
-            await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
+        if (isGroup) {
+            await client.sendMessage(msg.from, `¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
         }
         
         if (sessions[user_id]) clearUserTimeouts(sessions[user_id]);
@@ -240,7 +242,7 @@ client.on('message_create', async msg => {
         sessions[user_id] = { 
             step: 0,
             chat_id: msg.from, 
-            mention_id: (chat && chat.isGroup) ? user_id : null,
+            mention_id: isGroup ? user_id : null,
             chatHistoryLimpieza: [],
             chatHistoryAyuda: [],
             isPaused: false,
@@ -253,7 +255,7 @@ client.on('message_create', async msg => {
         return;
     }
 
-    if (chat && chat.isGroup) return;
+    if (isGroup) return;
 
     if (sessions[user_id]) {
         if (sessions[user_id].isPaused) return; 
@@ -278,7 +280,7 @@ client.on('message_create', async msg => {
         // ==========================================
         if (bodyLower.startsWith('ayuda') || bodyLower === 'ayuda') {
             try {
-                await chat.sendStateTyping();
+                if (chat && chat.sendStateTyping) await chat.sendStateTyping();
                 const modelAyuda = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     systemInstruction: `Eres soporte técnico para un bot de WhatsApp de creación de AGX.\nUsa este manual para responder la duda del usuario de forma muy breve y concisa (máximo 2 párrafos):\n${systemPromptCache}`
@@ -355,7 +357,7 @@ client.on('message_create', async msg => {
             // LIMPIEZA DE DATOS CON IA (GEMINI)
             // ==========================================
             try {
-                await chat.sendStateTyping();
+                if (chat && chat.sendStateTyping) await chat.sendStateTyping();
                 const modelLimpiador = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     systemInstruction: `Eres un limpiador de datos inteligente para una terminal CipherLab.
