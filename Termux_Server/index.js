@@ -118,7 +118,10 @@ const puppeteerOptions = {
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-gpu-compositing',
+        '--disable-software-rasterizer',
+        '--mute-audio'
     ]
 };
 
@@ -208,7 +211,13 @@ client.on('message_create', async msg => {
     // LÓGICA PRINCIPAL DEL BOT 
     // ------------------------------------------
     const user_id = msg.author || msg.from;
-    const chat = await msg.getChat();
+    let chat;
+    try {
+        chat = await msg.getChat();
+    } catch (err) {
+        console.error("⚠️ Error obteniendo el chat:", err.message);
+        return;
+    }
     const body = msg.body.trim();
     const bodyLower = body.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
@@ -222,7 +231,7 @@ client.on('message_create', async msg => {
 
     const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx', 'solicitarte un agx', 'quisiera pedirte un agx'];
     if (triggerWords.includes(bodyLower)) {
-        if (chat.isGroup) {
+        if (chat && chat.isGroup) {
             await chat.sendMessage(`¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
         }
         
@@ -231,7 +240,7 @@ client.on('message_create', async msg => {
         sessions[user_id] = { 
             step: 0,
             chat_id: msg.from, 
-            mention_id: chat.isGroup ? user_id : null,
+            mention_id: (chat && chat.isGroup) ? user_id : null,
             chatHistoryLimpieza: [],
             chatHistoryAyuda: [],
             isPaused: false,
@@ -244,7 +253,7 @@ client.on('message_create', async msg => {
         return;
     }
 
-    if (chat.isGroup) return;
+    if (chat && chat.isGroup) return;
 
     if (sessions[user_id]) {
         if (sessions[user_id].isPaused) return; 
