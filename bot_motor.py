@@ -259,19 +259,27 @@ def configurar_propiedades_form(esc_id, next_id, record_tipo):
 
 
 def abrir_programa_y_plantilla(modelo):
-    """Abre el acceso directo del modelo y carga la plantilla .AGX desde File -> Open."""
+    """Abre el acceso directo del modelo y carga la plantilla .AGX desde File -> Open o directamente."""
     base_path = r"C:\Users\dell\Documents\Bot AGX\AGX Bot"
     
+    es_interfaz_moderna = (modelo == "8200" or modelo == "8000v2")
+    
     if modelo == "8200":
-        lnk_path = os.path.join(base_path, "8200 ForgeAG.exe.lnk")
         plantilla_path = os.path.join(base_path, "8200 AGX PLANTILLA.AGX")
+    elif modelo == "8000v2":
+        plantilla_path = os.path.join(base_path, "8000v2 AGX PLANTILLA.AGX")
     else:
         lnk_path = os.path.join(base_path, "8000 ForgeAG.exe.lnk")
         plantilla_path = os.path.join(base_path, "8000 AGX PLANTILLA.AGX")
 
-    print(f"➤ Abriendo software ForgeAG ({modelo}) a través de VBScript (AppActivate)...")
-    os.startfile(lnk_path)
-    
+    if es_interfaz_moderna:
+        print(f"➤ Abriendo software ForgeAG ({modelo}) cargando directamente la plantilla...")
+        import subprocess
+        exe_path = r"C:\CipherLab\Forge\Batch\8 Series\ForgeAG.exe"
+        subprocess.Popen([exe_path, plantilla_path])
+    else:
+        print(f"➤ Abriendo software ForgeAG ({modelo}) a través de VBScript (AppActivate)...")
+        os.startfile(lnk_path)
     import pygetwindow as gw
     import tempfile
     import subprocess
@@ -318,16 +326,19 @@ def abrir_programa_y_plantilla(modelo):
     print("⏳ Dando tiempo a que la interfaz gráfica (UI) termine de abrirse y cargar...")
     time.sleep(2.0) # Ajustado a 2.0s por seguridad
 
-    print(f"➤ Cargando plantilla: {os.path.basename(plantilla_path)}")
-    pyautogui.click(MAPA_UI["barra_superior"]["file"])
-    time.sleep(0.50) 
-    pyautogui.click(MAPA_UI["barra_superior"]["open"])
-    time.sleep(1.0) 
-    
-    pyautogui.write(plantilla_path)
-    time.sleep(0.40)
-    pyautogui.press('enter')
-    time.sleep(1.50) 
+    if not es_interfaz_moderna:
+        print(f"➤ Cargando plantilla mediante File -> Open: {os.path.basename(plantilla_path)}")
+        pyautogui.click(MAPA_UI["barra_superior"]["file"])
+        time.sleep(0.50) 
+        pyautogui.click(MAPA_UI["barra_superior"]["open"])
+        time.sleep(1.0) 
+        
+        pyautogui.write(plantilla_path)
+        time.sleep(0.40)
+        pyautogui.press('enter')
+        time.sleep(1.50) 
+    else:
+        print(f"➤ Plantilla {os.path.basename(plantilla_path)} cargada automáticamente.")
 
 def guardar_trabajo_final(modelo, cliente, tipo_agx):
     """Guarda el archivo AGX con el formato [Cliente] [Tipo] [Modelo] [Fecha] v[Version].AGX"""
@@ -390,11 +401,11 @@ def ejecutar_bot(datos):
     else:
         modo_ejecucion = "cerrado"
     
-    es_8200 = "scroll_tabla" in MAPA_UI["vista_form"]
-    modelo_str = "8200" if es_8200 else "8000"
+    es_8200 = "scroll_tabla" in MAPA_UI.get("vista_form", {})
+    modelo_exacto = datos.get('modelo_exacto', "8200" if es_8200 else "8000")
 
-    print(f"\n🤖 Iniciando Bot AGX ({modelo_str}). ¡Suelta el mouse y el teclado!...")
-    abrir_programa_y_plantilla(modelo_str)
+    print(f"\n🤖 Iniciando Bot AGX ({modelo_exacto}). ¡Suelta el mouse y el teclado!...")
+    abrir_programa_y_plantilla(modelo_exacto)
     resetear_comodines()
 
     try:
@@ -653,7 +664,7 @@ def ejecutar_bot(datos):
         archivos_generados = []
         
         if modo_ejecucion == "ambos":
-            path_abierto = guardar_trabajo_final(modelo_str, cliente, "Abierto")
+            path_abierto = guardar_trabajo_final(modelo_exacto, cliente, "Abierto")
             archivos_generados.append(path_abierto)
             
             print("\n➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
@@ -662,13 +673,13 @@ def ejecutar_bot(datos):
             print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
             pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
             
-            path_cerrado = guardar_trabajo_final(modelo_str, cliente, "Cerrado")
+            path_cerrado = guardar_trabajo_final(modelo_exacto, cliente, "Cerrado")
             archivos_generados.append(path_cerrado)
         elif modo_ejecucion == "abierto":
-            path_gen = guardar_trabajo_final(modelo_str, cliente, "Abierto")
+            path_gen = guardar_trabajo_final(modelo_exacto, cliente, "Abierto")
             archivos_generados.append(path_gen)
         else:
-            path_gen = guardar_trabajo_final(modelo_str, cliente, "Cerrado")
+            path_gen = guardar_trabajo_final(modelo_exacto, cliente, "Cerrado")
             archivos_generados.append(path_gen)
 
         print("\n✅ ¡SISTEMA AGX PROCEDURAL GENERADO Y GUARDADO PERFECTAMENTE!")

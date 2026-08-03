@@ -1,0 +1,23 @@
+00001|3/7/2026|09:46:18|SHOWROOM|8000|Ambos|Ambos|N/A|N/A|marbete: 5 - sku: 3-20|129944420098204
+00002|3/7/2026|13:49:10|Mister Mascotas|8000|Ambos|Ambos|N/A|N/A|Marbete 5-5 - SKU 1-30 - Cantidad 1-10 decimal|75419759956172
+00003|6/7/2026|13:10:01|Walmart|8200|Ambos|Ambos|N/A|N/A|Ubicación 5-14 -  - Marbete 5 -  - SKU 6-16 - Lote 5 -  - Caja 5-14|74831349469423
+00004|6/7/2026|15:21:08|Ivonne|8200|Ambos|Pieza x Pieza|N/A|N/A| -  - Marbete 5-5 -  - SKU 15-15|76528247435339
+00005|6/7/2026|19:45:19|IVONNE|8200|Ambos|Pieza x Pieza|N/A|N/A| -  - MARBETE 1-5 texto -  - Sku 5-15 texto|76528247435339
+00006|7/7/2026|10:37:56|Show Room|8000|Ambos|Ambos|N/A|N/A|Marbete 1-5 texto -  - Sku 5-15 texto|186926204248121
+00007|7/7/2026|13:17:02|Walmart|8000|Abierto|Volumen|N/A|N/A|Marbete [5] [texto] -  - Sku [5-19] [texto]|74831349469423
+00008|8/7/2026|16:18:29|Fh logistica Lululemon|8200|Ambos|Ambos|N/A|N/A| -  - Ubicacion 7-14 texto -  - Caja 7-30 texto - Sku 12-14 texto Catálogo|100296697094291
+00009|8/7/2026|16:34:38|Fh Logística Lululemon|8200|Ambos|Ambos|N/A|N/A|Ubicacion 7-14 texto -  -  -  - Caja 7-30 texto -  -  -  - Sku 12-14 texto Catálogo|74831349469423
+00010|10/7/2026|18:35:39|FH Logística Lululemon|8200|Ambos|Ambos|N/A|N/A|Ubicacion 7-14 texto - Caja 7-30 texto -  -  -  - Sku 12-14 texto|74831349469423
+00011|10/7/2026|18:41:26|FH Logística Lululemon|8200|Ambos|Ambos|N/A|N/A|ubicacion 7-14 texto - Caja 7-30 texto -  -  -  - Sku 12-14 texto Catálogo|74831349469423
+00012|13/7/2026|10:24:46|Creed|8000|Ambos|Pieza x Pieza|N/A|N/A|ubicacion 5-5 -  -  -  - ubicacion 6-8 -  -  -  - LPN 1-11 - UPC 4-18|74831349469423
+00013|15/7/2026|15:28:37|Sun chemical|8000|Ambos|Pieza x Pieza|N/A|N/A|ubicacion 1-4 texto|94180495859852
+00014|15/7/2026|17:30:04|Sun Chemical|8000|Ambos|Ambos|N/A|N/A|Ubicacion 1-4 texto -  -  -  - SKU 1-8 texto - Destino 1-8 texto - Lote 1-10 texto - Decimal 1-10 texto - Cantidad 1-10 texto|74831349469423
+00015|15/7/2026|18:48:26|Sun Chemical|8000|Ambos|Ambos|N/A|N/A|Marbete 5 -  - Ubicación 1-4 -  - Sku 1-8 - Destino 1-8 - Lote 1-10 - Decimal 1-10 - Cantidad 1-10|74831349469423
+00016|16/7/2026|11:24:44|Creed|8000|Ambos|Ambos|N/A|N/A|Marbete 5-5 - Ubicacion 7-8 - LPN 10-10 - SKU 15-15 - Cantidad 1-100|75419759956172
+00017|16/7/2026|11:37:43|Prueba|8200|Abierto|Pieza x Pieza|N/A|N/A|Marbete 5-5 texto -  -  -  - SKU 1-30 texto|74831349469423
+00018|16/7/2026|13:21:44|Creed|8000|Ambos|Ambos|N/A|N/A|Marbete 5 texto - Ubicacion 7-8 texto -  -  -  -  -  - LPN 10 texto Catálogo - SKU 15 texto - Cantidad 1-80 numerico|74831349469423
+00019|16/7/2026|13:32:40|Sun Chemical|8000|Ambos|Ambos|N/A|N/A|Marbete 5 -  - Ubicación 1-4 -  - SKU 1-8 Catálogo - Destino 1-8 - Lote 1-10 - Decimal 1-10 - Cantidad 1-10|74831349469423
+00020|16/7/2026|13:38:52|Sun Chemical|8200|Ambos|Ambos|N/A|N/A|Marbete 1-5 texto -  -  -  - ubicacion 1-4 texto -  -  -  - SKU 1-8 texto Catálogo - Destino 1-8 texto - Lote 1-10 texto - Decimal 1-10 decimal - cantidad 1-10 numerico|74831349469423
+00021|16/7/2026|15:47:32|Sun Chemical|8000|Ambos|Ambos|N/A|N/A|Marbete 1-20 texto -  -  -  - ubicacion 1-4 texto -  -  -  - SKU 1-8 texto Catálogo - Destino 1-8 texto - Lote 1-10 texto - Decimal 1-10 texto - cantidad 1-10 numerico|74831349469423
+00022|16/7/2026|15:53:11|Sun Chemical|8200|Ambos|Ambos|N/A|N/A|ubicacion 1-20 texto -  -  -  - ubicacion 1-4 texto -  -  -  - SKU 1-8 texto Catalogo - Destino 1-8 texto - Lote 1-10 texto - Decimal 1-10 decimal - cantidad 1-10 numerico|74831349469423
+00023|20/7/2026|10:08:57|Soriana|8000|Abierto|Pieza x Pieza|N/A|N/A|Ubicacion 1-5 texto -  -  -  - SKU 11-18 texto|74831349469423

@@ -50,7 +50,7 @@ function getHistorialFile() {
 // ==========================================
 // PREGUNTAS DEL FORMULARIO HÍBRIDO
 // ==========================================
-const Q_MODELO = '🤖 `¡Hola! Soy tu asistente para crear AGX.`\n\nRecuerda que puedes escribir en cualquier momento:\n`Ayuda` = Obtener ayuda sobre el bot de creación de AGX.\n`Cancelar` = Para cancelar la petición.\n`Regresar` = Para regresar a la pregunta anterior.\n\n¿Qué modelo de terminal usarás?\n\n`1`. 8000\n`2`. 8200';
+const Q_MODELO = '🤖 `¡Hola! Soy tu asistente para crear AGX.`\n\nRecuerda que puedes escribir en cualquier momento:\n`Ayuda` = Obtener ayuda sobre el bot de creación de AGX.\n`Cancelar` = Para cancelar la petición.\n`Regresar` = Para regresar a la pregunta anterior.\n\n¿Qué modelo de terminal usarás?\n\n`1`. 8000\n`2`. 8000v2\n`3`. 8200\n`4`. Todos';
 const Q_INVENTARIO = '¿Cuál es el nombre del Inventario? (Ej. `Soriana`, `Walmart`, `Bodega Aurrera`)';
 const Q_TIPO = '¿De qué tipo será?\n_Forzado es igual a Abierto._\n\n`1`. Abierto (Forzado).\n`2`. Cerrado.\n`3`. Ambos.';
 const Q_FLUJO = '¿Cuál será el Flujo Operativo (Conteo)?\n\n`1`. Pieza x Pieza.\n`2`. Volumen.\n`3`. Ambos.';
@@ -116,8 +116,6 @@ const puppeteerOptions = {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--no-zygote',
-        '--single-process',
         '--disable-gpu',
         '--disable-gpu-compositing',
         '--disable-software-rasterizer',
@@ -128,7 +126,7 @@ const puppeteerOptions = {
 // Si estamos probando en Windows, usamos Microsoft Edge nativo
 if (os.platform() === 'win32') {
     puppeteerOptions.executablePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-} else if (os.platform() === 'linux' || os.platform() === 'android') {
+} else if (fs.existsSync('/data/data/com.termux/files/usr/bin/chromium-browser')) {
     puppeteerOptions.executablePath = '/data/data/com.termux/files/usr/bin/chromium-browser';
 }
 
@@ -138,7 +136,11 @@ const client = new Client({
             ? os.homedir() + '/.wwebjs_auth_bot' 
             : './.wwebjs_auth'
     }),
-    puppeteer: puppeteerOptions
+    puppeteer: puppeteerOptions,
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+    }
 });
 
 // ==========================================
@@ -328,8 +330,10 @@ client.on('message_create', async msg => {
         // ==========================================
         if (session.step === 0) {
             if (bodyLower === '1') { session.datos.Modelo = '8000'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else if (bodyLower === '2') { session.datos.Modelo = '8200'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1 o 2.`'); }
+            else if (bodyLower === '2') { session.datos.Modelo = '8000v2'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else if (bodyLower === '3') { session.datos.Modelo = '8200'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else if (bodyLower === '4' || bodyLower === 'todos') { session.datos.Modelo = 'Todos'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1, 2, 3 o 4.`'); }
             return;
         }
         else if (session.step === 1) {
@@ -354,143 +358,107 @@ client.on('message_create', async msg => {
         }
         else if (session.step === 4) {
             // ==========================================
-            // LIMPIEZA DE DATOS CON IA (GEMINI)
+            // MOTOR NATIVO HÍBRIDO (SIN IA)
             // ==========================================
             try {
-                if (chat && chat.sendStateTyping) await chat.sendStateTyping();
-                const modelLimpiador = genAI.getGenerativeModel({
-                    model: "gemini-2.5-flash",
-                    systemInstruction: `Eres un limpiador de datos inteligente para una terminal CipherLab.
-Base de Conocimiento: ${systemPromptCache}
-
-El usuario te pasará la lista cruda de los campos que desea capturar. Tu tarea es:
-1. Limpiar la ortografía y normalizar los nombres (ej. Marbite -> Marbete, SK -> SKU, Fecha de Caducidad -> Caducidad).
-2. Asegurar que todos tengan una longitud definida (ej. 1-10) según las reglas del manual.
-3. Si el usuario ingresa algo muy confuso o falta información vital (como la longitud de captura y no es un campo estándar que tenga default como Cantidad), PREGÚNTALE amablemente en texto corto qué longitud desea.
-4. Si toda la lista de datos ya está perfecta y clara, tu ÚNICA respuesta debe ser el bloque JSON final:
-{
-  "status": "COMPLETO",
-  "Datos": "[Datos limpios]"
-}
-
-REGLA DE SALTOS MANUALES: Si ves la palabra [SALTO_DE_PANTALLA] en el texto del usuario, DEBES imprimir esa misma palabra exacta en tu respuesta final para separar los datos. ¡NUNCA la borres!`
-                });
+                const stringSimilarity = require('string-similarity');
                 
-                const chatLimpieza = modelLimpiador.startChat({
-                    history: session.chatHistoryLimpieza.map(h => ({role: h.role, parts:[{text: h.text}]}))
-                });
+                // Separar el texto en Bloques usando doble salto de línea
+                let rawBlocks = body.replace(/\r\n/g, '\n').split(/\n\s*\n/).filter(b => b.trim() !== '');
                 
-                let bodyWithTokens = body.replace(/\n\s*\n/g, '\n[SALTO_DE_PANTALLA]\n');
-                const result = await chatLimpieza.sendMessage(bodyWithTokens);
-                const responseText = result.response.text().trim();
+                let locBlocks = [];
+                let dataBlocks = [];
+                let correctedAllBlocks = [];
                 
-                session.chatHistoryLimpieza.push({role: 'user', text: body});
-                session.chatHistoryLimpieza.push({role: 'model', text: responseText});
+                const palabrasLargas = ['ubicacion', 'marbete', 'cantidad', 'caducidad', 'descripcion', 'pedimento'];
                 
-                let cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-                if (cleanedText.startsWith('{') && cleanedText.endsWith('}')) {
-                    try {
-                        const parsed = JSON.parse(cleanedText);
-                        if (parsed.status === 'COMPLETO') {
-                            parsed.Datos = parsed.Datos.replace(/\[SALTO_DE_PANTALLA\]/gi, '\n\n');
-                            session.datos.Datos = parsed.Datos;
-                            session.pendingData = session.datos; 
-                            session.step = 5;
+                rawBlocks.forEach(bloqueStr => {
+                    let camposCrudos = bloqueStr.split(/\n/).map(f => f.trim()).filter(f => f !== '');
+                    let chunkedCampos = [];
+                    // Dividir arreglos mayores a 6 variables (límite del modelo 8000)
+                    for (let i = 0; i < camposCrudos.length; i += 6) {
+                        chunkedCampos.push(camposCrudos.slice(i, i + 6));
+                    }
+                    
+                    chunkedCampos.forEach(chunk => {
+                        let correctedFields = [];
+                        let hasLocalizacion = false;
+                        
+                        chunk.forEach(field => {
+                            let justWords = field.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z\s]/g, "").trim();
+                            let words = justWords.split(' ');
                             
-                            // Mostrar resumen
-                            let datosDibujados = '';
-                            if (parsed.Datos) {
-                                const bloques = parsed.Datos.split(/\n\s*\n/).filter(b => b.trim() !== '');
-                                let locBlocks = [];
-                                let dataBlocks = [];
-                                
-                                bloques.forEach(bloque => {
-                                    let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                                    if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) {
-                                        locBlocks.push(bloque.trim());
-                                    } else {
-                                        dataBlocks.push(bloque.trim());
-                                    }
-                                });
-                                
-                                locBlocks.forEach((b, i) => {
-                                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n${b}\n`;
-                                });
-                                
-                                dataBlocks.forEach((b, i) => {
-                                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n${b}\n`;
-                                });
+                            let correctedWords = words.map(w => {
+                                if (w.length >= 6) {
+                                    let match = stringSimilarity.findBestMatch(w, palabrasLargas);
+                                    if (match.bestMatch.rating > 0.75) return match.bestMatch.target;
+                                }
+                                return w;
+                            });
+                            
+                            let correctedString = correctedWords.join(' ');
+                            let finalField = field;
+                            if (correctedString.includes('ubicacion')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Ubicacion');
+                            else if (correctedString.includes('marbete')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Marbete');
+                            else if (correctedString.includes('caducidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Caducidad');
+                            else if (correctedString.includes('cantidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Cantidad');
+                            
+                            let matchNum = finalField.match(/^(.+?)\s+(\d+)$/);
+                            if (matchNum) {
+                                finalField = `${matchNum[1].trim()} ${matchNum[2]}-${matchNum[2]}`;
                             }
                             
-                            let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
-                            let displayFlujo = session.datos.Flujo === 'Ambos' ? 'Pz x Pz y Volumen' : session.datos.Flujo;
-
-                            let screenText = '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
-                            screenText += `- Inventario: ${session.datos.Inventario}\n`;
-                            screenText += `- Modelo: ${session.datos.Modelo}\n`;
-                            screenText += `- Conteo: ${displayFlujo}\n`;
-                            screenText += `- Tipo: ${displayTipo}\n`;
-                            screenText += `- Datos Requeridos:${datosDibujados}\n\n`;
-                            screenText += `\`a\`. *Enviar*\n\`b\`. *Corregir* _(regresa a los datos requeridos)_\n\`c\`. *Cancelar*`;
-                            await client.sendMessage(user_id, screenText);
-                            return;
+                            correctedFields.push(finalField);
+                            
+                            let checkLower = finalField.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            if (checkLower.includes('marbete') || checkLower.includes('ubicacion')) {
+                                hasLocalizacion = true;
+                            }
+                        });
+                        
+                        let bloqueCorregidoStr = correctedFields.join('\n');
+                        correctedAllBlocks.push(bloqueCorregidoStr);
+                        
+                        if (hasLocalizacion) {
+                            locBlocks.push(bloqueCorregidoStr);
+                        } else {
+                            dataBlocks.push(bloqueCorregidoStr);
                         }
-                    } catch(e) {
-                         await client.sendMessage(user_id, responseText);
-                    }
-                } else {
-                    // La IA respondió en texto (pidiendo aclaraciones)
-                    await client.sendMessage(user_id, responseText);
-                }
-            } catch(e) {
-                console.error("Error de IA (Posible cuota excedida):", e.message);
+                    });
+                });
                 
-                // MODO DE EMERGENCIA (BYPASS)
-                // Si la IA falla, asumimos que el usuario escribió perfectamente y pasamos el texto crudo
-                session.datos.Datos = body;
+                // Guardar la cadena limpia con dobles saltos de línea para Python
+                session.datos.Datos = correctedAllBlocks.join('\n\n');
                 session.pendingData = session.datos; 
                 session.step = 5;
                 
+                // Mostrar resumen visual en WhatsApp
                 let datosDibujados = '';
-                const bloques = body.split(/\n\s*\n/).filter(b => b.trim() !== '');
-                
-                let locTotal = 0;
-                let dataTotal = 0;
-                
-                bloques.forEach(bloque => {
-                    let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) locTotal++;
-                    else dataTotal++;
+                locBlocks.forEach((b, i) => {
+                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n\`${b}\`\n`;
                 });
-                
-                let locCurrent = 1;
-                let dataCurrent = 1;
-                
-                bloques.forEach(bloque => {
-                    let lowerBloque = bloque.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    if (lowerBloque.includes('marbete') || lowerBloque.includes('ubicacion')) {
-                        datosDibujados += `\n📺 *Pantalla Localización ${locCurrent}/${locTotal}*\n${bloque.trim()}\n`;
-                        locCurrent++;
-                    } else {
-                        datosDibujados += `\n📺 *Pantalla Datos ${dataCurrent}/${dataTotal}*\n${bloque.trim()}\n`;
-                        dataCurrent++;
-                    }
+                dataBlocks.forEach((b, i) => {
+                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n\`${b}\`\n`;
                 });
 
                 let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
                 let displayFlujo = session.datos.Flujo === 'Ambos' ? 'Pz x Pz y Volumen' : session.datos.Flujo;
+                let displayModelo = session.datos.Modelo === 'Todos' ? '8000, 8000v2 y 8200' : session.datos.Modelo;
 
-                let screenText = '⚠️ `Modo de Emergencia: La IA está fuera de línea. Los datos no fueron limpiados ortográficamente.`\n\n';
-                screenText += '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
-                screenText += `- Inventario: ${session.datos.Inventario}\n`;
-                screenText += `- Modelo: ${session.datos.Modelo}\n`;
-                screenText += `- Conteo: ${displayFlujo}\n`;
-                screenText += `- Tipo: ${displayTipo}\n`;
-                screenText += `- Datos Requeridos:${datosDibujados}\n\n`;
+                let screenText = '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
+                screenText += `- \`Inventario:\` ${session.datos.Inventario}\n`;
+                screenText += `- \`Modelo:\` ${displayModelo}\n`;
+                screenText += `- \`Conteo:\` ${displayFlujo}\n`;
+                screenText += `- \`Tipo:\` ${displayTipo}\n`;
+                screenText += `- \`Datos Requeridos:\`\n${datosDibujados}\n\n`;
                 screenText += `\`a\`. *Enviar*\n\`b\`. *Corregir* _(regresa a los datos requeridos)_\n\`c\`. *Cancelar*`;
-                
                 await client.sendMessage(user_id, screenText);
+                return;
+            } catch(e) {
+                console.error("Error en motor nativo híbrido:", e.message);
+                await client.sendMessage(user_id, '`⚠️ Ocurrió un error analizando los datos. Asegúrate de enviar la longitud. Ejemplo: Ubicacion 5-10`');
             }
+
             return;
         }
         else if (session.step === 5) {
@@ -522,64 +490,74 @@ async function processFinalAGX(user_id, parsed, session) {
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, '0');
     const readableDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const id_solicitud = `${readableDate}_${rand}`;
-
-    const documentData = {
-        "1_Estado_de_Orden": {
-            "Estatus": "PENDIENTE",
-            "Fecha_Legible": `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
-            "Entregado_al_usuario": false
-        },
-        "2_Respuestas_del_Cliente": {
-            "Modelo_AGX": parsed.Modelo || "",
-            "Cliente": parsed.Inventario || "",
-            "Tipo": parsed.Tipo || "",
-            "Flujo_Operativo": parsed.Flujo || "",
-            "Variables_Requeridas": parsed.Datos || ""
-        },
-        "3_Metadatos_Internos": {
-            "id_solicitud": id_solicitud,
-            "chat_id": session.chat_id,
-            "mention_id": session.mention_id || null
-        },
-        "ESTATUS": "PENDIENTE"
-    };
-
-    if (db) {
-        try {
-            await db.collection('solicitudes').doc(id_solicitud).set(documentData);
-            console.log(`➤ Solicitud Híbrida ${id_solicitud} subida a Firebase exitosamente.`);
-        } catch(e) {
-            console.log('⚠️ Error al subir a Firebase:', e);
-        }
-    }
     
-    let nextId = 1;
-    const currentHistorial = getHistorialFile();
-    if (fs.existsSync(currentHistorial)) {
-        const data = fs.readFileSync(currentHistorial, 'utf8').trim().split('\n');
-        if (data.length > 0 && data[0] !== "") {
-            const lastLine = data[data.length - 1];
-            const parts = lastLine.split('|');
-            if (parts.length > 0) {
-                const lastId = parseInt(parts[0], 10);
-                if (!isNaN(lastId)) {
-                    nextId = lastId + 1;
+    const modelosAProcesar = parsed.Modelo === 'Todos' ? ['8000', '8000v2', '8200'] : [parsed.Modelo];
+
+    for (let i = 0; i < modelosAProcesar.length; i++) {
+        const modeloStr = modelosAProcesar[i];
+        const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const id_solicitud = `${readableDate}_${rand}_${i}`;
+
+        const documentData = {
+            "1_Estado_de_Orden": {
+                "Estatus": "PENDIENTE",
+                "Fecha_Legible": `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+                "Entregado_al_usuario": false
+            },
+            "2_Respuestas_del_Cliente": {
+                "Modelo_AGX": modeloStr || "",
+                "Cliente": parsed.Inventario || "",
+                "Tipo": parsed.Tipo || "",
+                "Flujo_Operativo": parsed.Flujo || "",
+                "Variables_Requeridas": parsed.Datos || ""
+            },
+            "3_Metadatos_Internos": {
+                "id_solicitud": id_solicitud,
+                "chat_id": session.chat_id,
+                "mention_id": session.mention_id || null
+            },
+            "ESTATUS": "PENDIENTE"
+        };
+
+        if (db) {
+            try {
+                await db.collection('solicitudes').doc(id_solicitud).set(documentData);
+                console.log(`➤ Solicitud Híbrida ${id_solicitud} subida a Firebase exitosamente (Modelo: ${modeloStr}).`);
+            } catch(e) {
+                console.log('⚠️ Error al subir a Firebase:', e);
+            }
+        }
+        
+        let nextId = 1;
+        const currentHistorial = getHistorialFile();
+        if (fs.existsSync(currentHistorial)) {
+            const data = fs.readFileSync(currentHistorial, 'utf8').trim().split('\n');
+            if (data.length > 0 && data[0] !== "") {
+                const lastLine = data[data.length - 1];
+                const parts = lastLine.split('|');
+                if (parts.length > 0) {
+                    const lastId = parseInt(parts[0], 10);
+                    if (!isNaN(lastId)) {
+                        nextId = lastId + 1;
+                    }
                 }
             }
         }
+        const paddedId = String(nextId).padStart(5, '0');
+        const datosReq = (parsed.Datos || '').replace(/\n/g, ' - ');
+        const phone = user_id.split('@')[0];
+        const fechaRaw = new Date();
+        const fecha = fechaRaw.toLocaleDateString('es-MX');
+        const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
+        const logLine = `${paddedId}|${fecha}|${hora}|${parsed.Inventario}|${modeloStr}|${parsed.Tipo}|${parsed.Flujo}|N/A|N/A|${datosReq}|${phone}\n`;
+        fs.appendFileSync(currentHistorial, logLine);
+        
+        const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
+        console.log(`➤ [${fechaStr}] Nueva solicitud Híbrida: "${parsed.Inventario}" para modelo ${modeloStr}`);
     }
-    const paddedId = String(nextId).padStart(5, '0');
-    const datosReq = (parsed.Datos || '').replace(/\n/g, ' - ');
-    const phone = user_id.split('@')[0];
-    const fechaRaw = new Date();
-    const fecha = fechaRaw.toLocaleDateString('es-MX');
-    const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
-    const logLine = `${paddedId}|${fecha}|${hora}|${parsed.Inventario}|${parsed.Modelo}|${parsed.Tipo}|${parsed.Flujo}|N/A|N/A|${datosReq}|${phone}\n`;
-    fs.appendFileSync(currentHistorial, logLine);
 
-    await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada al generador AGX.```\n\n```Todos tus pedidos quedan en fila y se generarán en breve.```');
+    const msgExtra = modelosAProcesar.length > 1 ? `\n(Se procesarán ${modelosAProcesar.length} plantillas: ${modelosAProcesar.join(', ')})` : '';
+    await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada al generador AGX.```' + msgExtra + '\n\n```Todos tus pedidos quedan en fila y se generarán en breve.```');
     
     try {
         const serverState = await db.collection('configuracion').doc('estado_servidor').get();
@@ -599,9 +577,6 @@ async function processFinalAGX(user_id, parsed, session) {
     } catch (e) {
         console.error("Error al verificar latido del servidor:", e);
     }
-    
-    const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
-    console.log(`➤ [${fechaStr}] Nueva solicitud Híbrida: "${parsed.Inventario}"`);
 
     clearUserTimeouts(sessions[user_id]);
     delete sessions[user_id];

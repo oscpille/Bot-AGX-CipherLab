@@ -18,7 +18,7 @@ except Exception as e:
 DICCIONARIO_PREFIJOS = {
     # fca
     "fecha de caducidad": "fca", "fecha caducidad": "fca", "fecha de vencimiento": "fca",
-    "caduccion": "fca", "vencimiento": "fca", "caducidad": "fca",
+    "caduccion": "fca", "vencimiento": "fca", "caducidad": "fca", "expiracion": "fca", "cad": "fca",
     # nse
     "numero de serie": "nse", "numero serial": "nse", "serial number": "nse", 
     "series": "nse", "serie": "nse", "serial": "nse", "sn": "nse",
@@ -38,7 +38,7 @@ DICCIONARIO_PREFIJOS = {
     # mca, mod, lot, mar, tal, caj, are, col
     "marcas": "mca", "marca": "mca",
     "modelos": "mod", "modelo": "mod",
-    "lotes": "lot", "lote": "lot",
+    "lotes": "lot", "lote": "lot", "batch": "lot",
     "marbetes": "mar", "marbete": "mar",
     "tallas": "tal", "talla": "tal",
     "cajas": "caj", "caja": "caj",
@@ -46,8 +46,10 @@ DICCIONARIO_PREFIJOS = {
     "colores": "col", "color": "col",
     # ubi, sku, est
     "ubicacion": "ubi",
-    "sku": "sku", "sk": "sku", "sap": "sku",
+    "sku": "sku", "sk": "sku", "sap": "sku", "articulo": "sku", "item": "sku", "producto": "sku", "codigo de producto": "sku", "cve": "sku",
     "estado": "est", "condicion": "est", "estatus": "est",
+    # dep
+    "departamento": "dep", "depto": "dep", "familia": "dep", "clase": "dep", "seccion": "dep",
     # uni
     "unidades de medida": "uni", "unidad de medida": "uni", "unidades": "uni", "unidad": "uni", "medida": "uni",
     # con (Conteos y unidades específicas)
@@ -60,6 +62,35 @@ DICCIONARIO_PREFIJOS = {
     "libra": "con", "lb": "con", "onza": "con", "oz": "con", "grano": "con",
     "litros": "con", "galones": "con", "kl": "con", "ml": "con",
     "cantidad": "con", "conteo": "con"
+}
+
+DICCIONARIO_NOMBRES_CORTOS = {
+    "fecha de caducidad": "Caducidad",
+    "fecha caducidad": "Caducidad",
+    "fecha de vencimiento": "Caducidad",
+    "vencimiento": "Caducidad",
+    "numero de serie": "Serie",
+    "numero serial": "Serie",
+    "serial number": "Serie",
+    "registro aduanero": "Pedimento",
+    "mercancia importada": "Pedimento",
+    "importacion": "Pedimento",
+    "numero de matricula": "LPN",
+    "matricula": "LPN",
+    "codigo de barras": "C.Barras",
+    "codigo de barra": "C.Barras",
+    "codigo interno": "C.Interno",
+    "codigo cliente": "C.Cliente",
+    "descripcion de articulo": "Descrip.",
+    "descripcion": "Descrip.",
+    "id terminal": "Terminal",
+    "ns del scaner": "Scanner",
+    "numero de caja": "Caja",
+    "unidades de medida": "U.Medida",
+    "unidad de medida": "U.Medida",
+    "codigo de producto": "C.Producto",
+    "departamento": "Depto.",
+    "depto": "Depto."
 }
 
 TRADUCCION_TIPOS = {

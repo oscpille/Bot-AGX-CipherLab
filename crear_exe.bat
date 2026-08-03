@@ -18,6 +18,10 @@ echo 3. Creando el archivo EXE (esto puede tardar un minuto)...
 python -m PyInstaller --onefile --name "AutomatizadorAGX" --hidden-import=mapeo_8000 --hidden-import=mapeo_8200 main.py
 
 echo.
+echo 4. Copiando credenciales de Firebase...
+copy "firebase_key.json" "dist\firebase_key.json" > nul
+
+echo.
 echo =============================================
 echo    PROCESO TERMINADO
 echo    Busca tu archivo en la carpeta "dist"

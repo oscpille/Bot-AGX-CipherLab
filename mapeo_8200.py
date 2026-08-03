@@ -6,7 +6,10 @@ MAPA_UI = {
     "barra_superior": {
         "file": (190, 35),
         "open": (190, 90),
-        "save_as": (190, 130)
+        "save_as": (190, 130),
+        "new": (190, 60),
+        "8000": (560, 60),
+        "8200": (560, 80)
     },
     
     "directorio_izquierdo": {

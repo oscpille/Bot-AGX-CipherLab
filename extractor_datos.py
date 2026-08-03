@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import sys
 import unicodedata
-from config import TRADUCCION_TIPOS, MAPA_UI
+from config import TRADUCCION_TIPOS, MAPA_UI, DICCIONARIO_NOMBRES_CORTOS
 
 def limpiar_texto(texto):
     """Quita acentos y pasa a minúsculas para comparaciones exactas."""
@@ -113,13 +113,21 @@ def procesar_solicitud(solicitud):
             
         print(f"➤ Analizando datos de la solicitud recibida el {fecha_str}...")
         modelo_solicitado = str(solicitud.get('¿QUÉ MODELO DE AGX NECESITAS?', '')).strip()
+        modelo_exacto = "8000"
         
         if "8200" in modelo_solicitado:
             print("➤ Configuración Detectada: MODELO 8200")
+            modelo_exacto = "8200"
+            import mapeo_8200
+            MAPA_UI.update(mapeo_8200.MAPA_UI)
+        elif "8000v2" in modelo_solicitado.lower():
+            print("➤ Configuración Detectada: MODELO 8000v2")
+            modelo_exacto = "8000v2"
             import mapeo_8200
             MAPA_UI.update(mapeo_8200.MAPA_UI)
         else:
             print("➤ Configuración Detectada: MODELO 8000")
+            modelo_exacto = "8000"
             import mapeo_8000
             MAPA_UI.update(mapeo_8000.MAPA_UI)
             
@@ -146,12 +154,14 @@ def procesar_solicitud(solicitud):
             nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en|a|al|hasta)$', '', match_nombre.group(1).strip()).strip()
             nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
             
-            if "fecha de caducidad" in nombre_original.lower():
-                nombre_original = "Caducidad"
-            elif "numero de caja" in limpiar_texto(nombre_original):
-                nombre_original = "Caja"
-            elif "ean" in limpiar_texto(nombre_original):
-                nombre_original = "EAN" 
+            nombre_original_lower = limpiar_texto(nombre_original)
+            for largo, corto in DICCIONARIO_NOMBRES_CORTOS.items():
+                if largo in nombre_original_lower:
+                    nombre_original = corto
+                    break
+            
+            if "ean" in nombre_original_lower:
+                nombre_original = "EAN"
                 
             nombre_logico = limpiar_texto(nombre_original)
             
@@ -165,19 +175,9 @@ def procesar_solicitud(solicitud):
                 num_match = re.search(r'\b(\d+)\b', linea_limpia)
                 if num_match: min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
                 
-            tipo_bruto = None
-            
-            for t in ["alfanumerico", "alfanum", "numérico", "numerico", "num", "entero", "decimal", "texto", "letras", "lookup"]:
-                if t in linea_limpia: 
-                    tipo_bruto = t
-                    break
-                    
             if "marbete" in nombre_logico:
                 tipo_bruto = "entero"
-            elif "ubicacion" in nombre_logico or "sku" in nombre_logico or "cant" in nombre_logico:
-                tipo_bruto = "texto"
-                
-            if not tipo_bruto:
+            else:
                 tipo_bruto = "texto"
                     
             linea_limpia_sin_acentos = limpiar_texto(linea)
@@ -306,7 +306,8 @@ def procesar_solicitud(solicitud):
             'dict_captura': {v.get('nombre_pantalla', f'var_{i}'): v for i, v in enumerate(listado_vars) if not v.get('is_page_break')},
             'id_solicitud': id_solicitud,
             'chat_id': chat_id,
-            'mention_id': mention_id
+            'mention_id': mention_id,
+            'modelo_exacto': modelo_exacto
         }
 
     except Exception as e:
