@@ -358,6 +358,16 @@ client.on('message_create', async msg => {
         }
         else if (session.step === 4) {
             // ==========================================
+            // VALIDACIÓN DE AGX CERRADO
+            // ==========================================
+            if (session.datos.Tipo === 'Cerrado' || session.datos.Tipo === 'Ambos') {
+                if (!bodyLower.includes('lookup') && !bodyLower.includes('catalogo')) {
+                    await client.sendMessage(user_id, '`⚠️ Tu solicitud requiere un archivo cerrado, pero no indicaste qué dato se va a validar.`\n\nPara los AGX Cerrados, debes especificar qué campo cruzará contra la base de datos agregando la palabra *"Lookup"* o *"Catálogo"*. \n\n*Ejemplo correcto:*\nUbicación 4-6\nCódigo (Lookup) 1-13\nCantidad 1-5\n\nPor favor, vuelve a enviar tus datos con esta corrección.');
+                    return;
+                }
+            }
+
+            // ==========================================
             // MOTOR NATIVO HÍBRIDO (SIN IA)
             // ==========================================
             try {
