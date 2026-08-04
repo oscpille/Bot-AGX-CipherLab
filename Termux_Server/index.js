@@ -408,10 +408,22 @@ client.on('message_create', async msg => {
                             
                             let correctedString = correctedWords.join(' ');
                             let finalField = field;
-                            if (correctedString.includes('ubicacion')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Ubicacion');
-                            else if (correctedString.includes('marbete')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Marbete');
-                            else if (correctedString.includes('caducidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Caducidad');
-                            else if (correctedString.includes('cantidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Cantidad');
+                            
+                            let numIndex = finalField.search(/\d/);
+                            if (numIndex !== -1) {
+                                let promptPart = finalField.substring(0, numIndex);
+                                let rest = finalField.substring(numIndex);
+                                if (correctedString.includes('ubicacion')) promptPart = 'Ubicacion ';
+                                else if (correctedString.includes('marbete')) promptPart = 'Marbete ';
+                                else if (correctedString.includes('caducidad')) promptPart = 'F.Caducidad ';
+                                else if (correctedString.includes('cantidad')) promptPart = 'Cantidad ';
+                                finalField = promptPart + rest;
+                            } else {
+                                if (correctedString.includes('ubicacion')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Ubicacion');
+                                else if (correctedString.includes('marbete')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Marbete');
+                                else if (correctedString.includes('caducidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'F.Caducidad');
+                                else if (correctedString.includes('cantidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Cantidad');
+                            }
                             
                             let matchNum = finalField.match(/^(.+?)\s+(\d+)$/);
                             if (matchNum) {
@@ -445,10 +457,12 @@ client.on('message_create', async msg => {
                 // Mostrar resumen visual en WhatsApp
                 let datosDibujados = '';
                 locBlocks.forEach((b, i) => {
-                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n\`${b}\`\n`;
+                    let lines = b.split('\n').map(line => `\`${line}\``).join('\n');
+                    datosDibujados += `\n📺 *Pantalla Localización ${i + 1}/${locBlocks.length}*\n${lines}\n`;
                 });
                 dataBlocks.forEach((b, i) => {
-                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n\`${b}\`\n`;
+                    let lines = b.split('\n').map(line => `\`${line}\``).join('\n');
+                    datosDibujados += `\n📺 *Pantalla Datos ${i + 1}/${dataBlocks.length}*\n${lines}\n`;
                 });
 
                 let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
