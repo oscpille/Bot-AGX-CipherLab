@@ -506,7 +506,8 @@ async function processFinalAGX(user_id, parsed, session) {
     for (let i = 0; i < modelosAProcesar.length; i++) {
         const modeloStr = modelosAProcesar[i];
         const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        const id_solicitud = `${readableDate}_${rand}_${i}`;
+        const userPhone = user_id.split('@')[0];
+        const id_solicitud = `${userPhone}_${readableDate}_${rand}_${i}`;
 
         const documentData = {
             "1_Estado_de_Orden": {
