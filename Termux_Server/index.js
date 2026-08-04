@@ -417,12 +417,16 @@ client.on('message_create', async msg => {
                                 else if (correctedString.includes('marbete')) promptPart = 'Marbete ';
                                 else if (correctedString.includes('caducidad')) promptPart = 'F.Caducidad ';
                                 else if (correctedString.includes('cantidad')) promptPart = 'Cantidad ';
+                                else if (correctedString.includes('codigo de barras')) promptPart = 'C de Barras ';
+                                else if (correctedString.includes('unidad de medida')) promptPart = 'Unid.Medida ';
                                 finalField = promptPart + rest;
                             } else {
                                 if (correctedString.includes('ubicacion')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Ubicacion');
                                 else if (correctedString.includes('marbete')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Marbete');
                                 else if (correctedString.includes('caducidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'F.Caducidad');
                                 else if (correctedString.includes('cantidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Cantidad');
+                                else if (correctedString.includes('codigo de barras')) finalField = finalField.replace(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+/, 'C de Barras ');
+                                else if (correctedString.includes('unidad de medida')) finalField = finalField.replace(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+/, 'Unid.Medida ');
                             }
                             
                             let matchNum = finalField.match(/^(.+?)\s+(\d+)$/);
