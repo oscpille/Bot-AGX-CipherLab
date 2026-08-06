@@ -583,7 +583,7 @@ def ejecutar_bot(datos):
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     escribir_celda(6, "pause", "[ENTER] O [ESC]")
-                    escribir_celda(7, "fixed_data", "1", prefijo_forzado="con#")
+                    escribir_celda(7, "fixed_data", "1", prefijo_forzado="cn#")
                 else:
                     for v_blank in range(len(rebanada) + 1, 7): escribir_celda(v_blank, "nil", "")
                     escribir_celda(7, "pause", "[SIGUIENTE] ->")
