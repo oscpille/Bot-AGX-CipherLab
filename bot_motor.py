@@ -217,12 +217,12 @@ def crear_pantalla_login_secundaria(form_coords, tipo_conteo, next_form_id):
         
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
-    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="usu#", input_mark_char="*")
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="nom#") 
+    escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="pw#", input_mark_char="*")
+    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="us#") 
     escribir_celda(4, "nil", "")
     escribir_celda(5, "prompt", "TIPO DE CONTEO:")
-    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="tco#")
-    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nct#")
+    escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="rk#")
+    escribir_celda(7, "fixed_data", "1", prefijo_forzado="nc#")
 
 def configurar_propiedades_form(esc_id, next_id, record_tipo):
     """Enruta la navegación usando atajos F y M para máxima velocidad."""
@@ -340,7 +340,7 @@ def abrir_programa_y_plantilla(modelo):
     else:
         print(f"➤ Plantilla {os.path.basename(plantilla_path)} cargada automáticamente.")
 
-def guardar_trabajo_final(modelo, cliente, tipo_agx):
+def guardar_trabajo_final(modelo, cliente, tipo_agx, telefono=""):
     """Guarda el archivo AGX con el formato [Cliente] [Tipo] [Modelo] [Fecha] v[Version].AGX"""
     base_path = r"C:\Users\dell\Documents\Bot AGX\AGX Bot"
     folder_name = f"Modelo {modelo}"
@@ -351,9 +351,9 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx):
         
     # Determinar si es Abierto o Cerrado para el nombre
     tipo_limpio = limpiar_texto(tipo_agx)
-    tipo_nombre = "Abierto" if "abierto" in tipo_limpio or "forzado" in tipo_limpio else "Cerrado"
+    tipo_nombre = "[A]" if "abierto" in tipo_limpio or "forzado" in tipo_limpio else "[C]"
     
-    fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+    fecha_hoy = datetime.now().strftime("%y-%m-%d")
     version = 1
     cliente_ascii = unicodedata.normalize('NFD', cliente).encode('ascii', 'ignore').decode('utf-8')
     cliente_limpio = re.sub(r'[\\/*?:"<>|]', "", cliente_ascii).strip()
@@ -386,7 +386,7 @@ def ejecutar_bot(datos):
     es_volumen = datos['es_volumen']
     cliente = datos['cliente']
     tipo_agx = datos['tipo_agx']
-    telefono = datos.get('telefono', '')
+    telefono = datos.get('chat_id', '').split('@')[0]
     plan_vuelo = datos['plan_vuelo']
     info_cantidad = datos['info_cantidad']
     multiplos_por_lookup = datos.get('multiplos_por_lookup', {})
