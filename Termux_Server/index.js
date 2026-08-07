@@ -273,8 +273,7 @@ const client = new Client({
     }),
     puppeteer: puppeteerOptions,
     webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+        type: 'local'
     }
 });
 
@@ -307,6 +306,18 @@ client.sendMessage = async function(chatId, content, options = {}) {
 client.on('qr', (qr) => {
     console.log('➤ Escanea este código QR con la app de WhatsApp para vincular el bot de Termux:');
     qrcode.generate(qr, { small: true });
+});
+
+client.on('loading_screen', (percent, message) => {
+    console.log(`⌛ Cargando WhatsApp Web... ${percent}% - ${message}`);
+});
+
+client.on('authenticated', () => {
+    console.log('🔒 Autenticado correctamente con WhatsApp Web.');
+});
+
+client.on('auth_failure', msg => {
+    console.error('❌ Falló la autenticación con WhatsApp Web:', msg);
 });
 
 client.on('ready', () => {
