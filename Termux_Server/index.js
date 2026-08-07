@@ -9,6 +9,133 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Inicializar Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// ==========================================
+// INTEGRACIÓN DEL COTIZADOR
+// ==========================================
+const { handleMessage: handleCotizadorMessage, sessions: cotizadorSessions } = require('./cotizadorFlow');
+const { getCatalog, getQuote, saveQuote } = require('./supabase');
+const { generatePDF } = require('./pdfGenerator');
+
+let cotizadorCatalog = {};
+getCatalog().then(data => {
+    cotizadorCatalog = data;
+    console.log("✅ Catálogo del Cotizador cargado desde Supabase.");
+}).catch(e => console.error("Error cargando catálogo:", e));
+
+function logWithTime(message) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-MX', { hour12: false });
+    console.log(`[${timeStr}] ${message}`);
+}
+
+async function processCotizadorAction(client, msg, actionObj) {
+    if (actionObj.action === 'REPRINT') {
+        try {
+            const historicalData = await getQuote(actionObj.folio);
+            if (historicalData) {
+                const reprintSession = {
+                    folio: historicalData.folio,
+                    company: historicalData.empresa,
+                    name: historicalData.cliente,
+                    role: historicalData.role || '', 
+                    items: historicalData.productos
+                };
+                
+                let historicalDate = null;
+                if (historicalData.fechaCreacion && historicalData.fechaCreacion.toDate) {
+                    historicalDate = historicalData.fechaCreacion.toDate();
+                }
+                
+                let priceWarning = false;
+                const { getPriceForQuantity } = require('./supabase');
+                reprintSession.items.forEach(histItem => {
+                    const catItems = cotizadorCatalog[histItem.product];
+                    if (catItems) {
+                        const currentDim = catItems.find(d => d.dimension === histItem.dimension);
+                        if (currentDim) {
+                            const currentPrice = getPriceForQuantity(currentDim, histItem.quantity);
+                            if (Math.abs(currentPrice - histItem.priceUnit) > 0.01) {
+                                priceWarning = true;
+                            }
+                        }
+                    }
+                });
+                actionObj.priceWarning = priceWarning;
+                
+                logWithTime(`Generando PDF histórico para ${actionObj.folio}...`);
+                const pdfBuffer = await generatePDF(client.pupBrowser, reprintSession, historicalDate);
+                
+                const base64Pdf = Buffer.isBuffer(pdfBuffer) ? pdfBuffer.toString('base64') : Buffer.from(pdfBuffer).toString('base64');
+                const pdfMedia = new MessageMedia('application/pdf', base64Pdf, `Reimpresion_${actionObj.folio}.pdf`);
+                
+                if (actionObj.priceWarning) {
+                    await client.sendMessage(msg.from, `⚠️ *ATENCIÓN:* Los precios de esta cotización están desactualizados respecto al tabulador actual en la base de datos.`);
+                }
+                
+                await client.sendMessage(msg.from, pdfMedia);
+                logWithTime(`Reimpresión de ${actionObj.folio} enviada al vendedor.`);
+            } else {
+                await client.sendMessage(msg.from, `Lo siento, no pude encontrar ninguna cotización con el folio *${actionObj.folio}* en nuestra base de datos.\nEscribe 'Cotizar Placa' para empezar de nuevo.`);
+            }
+        } catch (err) {
+            console.error("Error en la reimpresión:", err);
+            await client.sendMessage(msg.from, "Ocurrió un error al buscar la cotización en el servidor. Por favor, intenta de nuevo más tarde.");
+        }
+    } else if (actionObj.action === 'GENERATE_PDF') {
+        const session = actionObj.session;
+        const fullDescText = actionObj.descText;
+        
+        logWithTime("Creando PDF para el vendedor...");
+        session.items.forEach(item => item.customDescription = "");
+        
+        if (fullDescText.toLowerCase() !== 'ninguna' && fullDescText.toLowerCase() !== 'descripción:') {
+            const regex = /Descripci[óo]n\s*(\d+)?:/gi;
+            let match;
+            let lastIndex = -1;
+            let lastItemNum = 1;
+            const descBlocks = [];
+            
+            while ((match = regex.exec(fullDescText)) !== null) {
+                if (lastIndex !== -1) {
+                    descBlocks.push({ itemNum: lastItemNum, text: fullDescText.substring(lastIndex, match.index).trim() });
+                }
+                lastItemNum = match[1] ? parseInt(match[1]) : 1;
+                lastIndex = match.index + match[0].length;
+            }
+            
+            if (lastIndex !== -1) {
+                descBlocks.push({ itemNum: lastItemNum, text: fullDescText.substring(lastIndex).trim() });
+            } else {
+                const simpleText = fullDescText.replace(/^Descripci[óo]n\s*/i, '').trim();
+                if (simpleText) descBlocks.push({ itemNum: 1, text: simpleText });
+            }
+            
+            descBlocks.forEach(block => {
+                if (block.itemNum >= 1 && block.itemNum <= session.items.length) {
+                    session.items[block.itemNum - 1].customDescription = block.text.replace(/\n/g, '<br/>');
+                }
+            });
+        }
+
+        try {
+            const pdfBuffer = await generatePDF(client.pupBrowser, session);
+            const base64Pdf = Buffer.isBuffer(pdfBuffer) ? pdfBuffer.toString('base64') : Buffer.from(pdfBuffer).toString('base64');
+            const pdfMedia = new MessageMedia('application/pdf', base64Pdf, `Cotizacion_${session.company.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+            
+            await client.sendMessage(msg.from, pdfMedia);
+            logWithTime(`PDF enviado exitosamente (Folio: ${session.folio}).`);
+            
+            await client.sendMessage(msg.from, "Una vez tengas el pdf correcto escribe 'Terminar' para finalizar esta conversación o sigue enviando descripciones para regenerarlo.");
+            
+            await saveQuote(session, session.company, session.name, session.role, msg.from);
+        } catch (err) {
+            console.error("Error al generar PDF:", err);
+            await client.sendMessage(msg.from, "Hubo un error al generar el PDF.");
+        }
+    }
+}
+
 let systemPromptCache = '';
 try {
     if (fs.existsSync('../MANUAL_WHATSAPP.txt')) {
@@ -80,27 +207,35 @@ function clearUserTimeouts(session) {
     if (session.cancelTimeout) clearTimeout(session.cancelTimeout);
 }
 
-function resetUserTimeout(user_id) {
-    const session = sessions[user_id];
+function resetUserTimeout(user_id, type = 'agx') {
+    const isCot = type === 'cotizador';
+    const session = isCot ? cotizadorSessions[user_id] : sessions[user_id];
     if (!session) return;
     
     clearUserTimeouts(session);
     
-    // Warning at 4 minutes 25 seconds (265,000 ms)
+    // Warning at 9 minutes 30 seconds (570,000 ms)
     session.warningTimeout = setTimeout(async () => {
-        if (sessions[user_id] && !sessions[user_id].isPaused) {
+        const currentSession = isCot ? cotizadorSessions[user_id] : sessions[user_id];
+        if (currentSession && !currentSession.isPaused) {
             await client.sendMessage(user_id, '🤖 `¿Hola, sigues ahí?`\n\n\n\n_La sesión se cerrará en 30 segundos_');
         }
-    }, 265000);
+    }, 570000);
     
-    // Cancel at 5 minutes (300,000 ms)
+    // Cancel at 10 minutes (600,000 ms)
     session.cancelTimeout = setTimeout(async () => {
-        if (sessions[user_id] && !sessions[user_id].isPaused) {
-            clearUserTimeouts(sessions[user_id]);
-            delete sessions[user_id];
-            await client.sendMessage(user_id, '```🛑 Se ha cancelado tu sesión por inactividad. Si deseas volver a empezar, envía: ``` `\'Solicitar AGX\'.`');
+        const currentSession = isCot ? cotizadorSessions[user_id] : sessions[user_id];
+        if (currentSession && !currentSession.isPaused) {
+            clearUserTimeouts(currentSession);
+            if (isCot) {
+                currentSession.state = 'IDLE';
+                await client.sendMessage(user_id, '```🛑 Se ha cancelado tu cotización por inactividad. Si deseas volver a empezar, envía: ``` `\'Cotizar Placa\'.`');
+            } else {
+                delete sessions[user_id];
+                await client.sendMessage(user_id, '```🛑 Se ha cancelado tu sesión por inactividad. Si deseas volver a empezar, envía: ``` `\'Solicitar AGX\'.`');
+            }
         }
-    }, 300000);
+    }, 600000);
 }
 
 // ==========================================
@@ -225,6 +360,57 @@ client.on('message_create', async msg => {
     const body = msg.body.trim();
     const bodyLower = body.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
+    // ------------------------------------------
+    // INTERCEPTOR DEL COTIZADOR
+    // ------------------------------------------
+    const cotizadorTriggers = ['cotizar placa', 'cotizar placas', 'cotizacion de placas', 'cotizacion de placa', 'cotización de placas', 'cotización de placa'];
+    const sessionCot = cotizadorSessions[user_id];
+    const isCotizadorActive = sessionCot && sessionCot.state !== 'IDLE' && sessionCot.state !== 'QUOTE_FINISHED';
+    
+    // El usuario también puede entrar con '3' si está eligiendo una acción del menú del cotizador
+    const isChoosingCotizadorAction = sessionCot && sessionCot.state === 'CHOOSE_ACTION' && ['1', '2', '3'].includes(bodyLower);
+    
+    if (cotizadorTriggers.includes(bodyLower) || isCotizadorActive || isChoosingCotizadorAction) {
+        if (sessions[user_id] && !isCotizadorActive && !isChoosingCotizadorAction) {
+            await client.sendMessage(user_id, "Tienes una solicitud de AGX en curso. Por favor terminala o cancelala escribiendo 'Cancelar' antes de iniciar una cotización.");
+            return;
+        }
+
+        try {
+            let flowResult = await handleCotizadorMessage(msg, cotizadorCatalog);
+            let responseText = null;
+            let actionObj = null;
+
+            if (typeof flowResult === 'object' && flowResult !== null) {
+                responseText = flowResult.text;
+                actionObj = flowResult;
+            } else {
+                responseText = flowResult;
+            }
+            
+            if (responseText) {
+                const delayMs = Math.min(Math.max(responseText.length * 30, 1500), 6000);
+                setTimeout(async () => {
+                    await client.sendMessage(msg.from, responseText);
+                    if (actionObj) {
+                        await processCotizadorAction(client, msg, actionObj);
+                    }
+                }, delayMs);
+            }
+            if (sessionCot && sessionCot.state !== 'IDLE' && sessionCot.state !== 'QUOTE_FINISHED') {
+                resetUserTimeout(user_id, 'cotizador');
+            } else if (sessionCot && (sessionCot.state === 'IDLE' || sessionCot.state === 'QUOTE_FINISHED')) {
+                clearUserTimeouts(sessionCot);
+            }
+        } catch (e) {
+            console.error("Error en flujo del Cotizador:", e);
+        }
+        return; // Detenemos la ejecución aquí para que el Bot AGX no procese este mensaje
+    }
+
+    // ------------------------------------------
+    // FLUJO AGX (Soporte y Creación)
+    // ------------------------------------------
     if (bodyLower === 'hablar con un humano' || bodyLower === 'humano' || bodyLower === 'soporte') {
         if (sessions[user_id]) {
              sessions[user_id].isPaused = true;
@@ -235,6 +421,11 @@ client.on('message_create', async msg => {
 
     const triggerWords = ['solicitud agx', 'solicitud de agx', 'solicitar agx', 'me ayudas con un agx', 'quisiera pedir un agx', 'solicitarte un agx', 'quisiera pedirte un agx'];
     if (triggerWords.includes(bodyLower)) {
+        if (isCotizadorActive || isChoosingCotizadorAction) {
+            await client.sendMessage(user_id, "Tienes una cotización en curso. Por favor terminala o cancelala escribiendo 'Cancelar' antes de solicitar un AGX.");
+            return;
+        }
+
         if (isGroup) {
             await client.sendMessage(msg.from, `¡Hola @${user_id.split('@')[0]}! Para no hacer spam en este grupo, te he enviado un mensaje privado para iniciar tu solicitud.`);
         }
