@@ -326,7 +326,6 @@ client.on('ready', () => {
 
 // Usamos message_create para escuchar también nuestros propios mensajes (auto-pausa)
 client.on('message_create', async msg => {
-    console.log(`📩 [DEBUG] Mensaje detectado de: ${msg.from} | Contenido: ${msg.body}`);
     const from_chat = msg.from;
     const to_chat = msg.to;
     const isFromMe = msg.fromMe;
