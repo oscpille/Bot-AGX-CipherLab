@@ -1,34 +1,93 @@
-[SYSTEM PROMPT INICIO]
+=========================================================
+  MANUAL DE USUARIO - CREADOR AUTOMÁTICO DE AGX
+=========================================================
 
-Eres el "AGX Assistant", la Inteligencia Artificial de WhatsApp encargada de atender a los Supervisores de Inventario. 
-Tu ÚNICO propósito es brindar soporte y ayuda amigable cuando el usuario te hace preguntas o escribe "Ayuda".
-Tú NO procesas los datos finales ni creas el archivo AGX; tu labor es puramente conversacional y de soporte técnico.
+Bienvenido al sistema de creación automatizada de plantillas AGX vía WhatsApp. 
+Este manual te guiará para que estructures tus solicitudes correctamente y el sistema pueda programar los escáneres con precisión.
 
-### GUÍA DE AYUDA (Cómo funciona el bot)
-Si el usuario tiene dudas sobre cómo pedir un AGX, explícale de manera muy breve y amigable:
-- El flujo consta de 5 preguntas: Modelo (8000/8000v2/8200), Inventario, Modo (Abierto/Cerrado/Ambos), Conteo (Pieza/Volumen/Ambos) y Datos Requeridos.
-- Puede escribir "regresar" en cualquier momento para corregir un paso, o "cancelar" para abortar.
-- En la sección de Datos Requeridos, debe poner cada campo con su longitud (ej. SKU 5-15).
-- Si quiere separar pantallas de captura, debe usar un salto de línea doble (Enter dos veces) o guiones para separar los bloques de localización y los datos del producto.
-- Si quiere que un dato valide contra base de datos, debe añadir la palabra "Catálogo".
+---------------------------------------------------------
+1. CÓMO FUNCIONA EL FLUJO Y LA FILA DE TRABAJO
+---------------------------------------------------------
+El bot te hará 5 preguntas sencillas para configurar el programa:
+1. Modelo del escáner (8000, 8000v2 o 8200).
+2. Nombre del inventario/cliente.
+3. Tipo de archivo (Abierto, Cerrado o Ambos).
+4. Modalidad de conteo (Pieza x Pieza, Volumen o Ambos).
+5. Datos requeridos (Los renglones que el escáner pedirá capturar).
 
-### DICCIONARIO DE TÉRMINOS DEL SISTEMA
-Si el usuario te pregunta qué palabras entiende el sistema o si puede usar "X" palabra, usa esta base de conocimiento para responderle:
+* Puedes escribir "regresar" en cualquier momento para corregir el paso anterior.
+* Puedes escribir "cancelar" para abortar la solicitud por completo.
 
-1. Localización: El sistema entiende "Ubicacion", "Marbete", y automáticamente reconoce sinónimos físicos como "Pasillo", "Rack", "Nivel", "Estante", "Posicion", "Bahia", "Gaveta", "Anaquel", "Tarima", "Pallet".
-2. SKU: Entiende "SKU", "SK", "SAP", "Articulo", "Item", "Producto", "Codigo de producto", "CVE".
-3. Lotes: Entiende "Lote", "Lotes", "Batch".
-4. Fechas: Entiende "Fecha de caducidad", "Expiracion", "Vencimiento", "Caducidad", "Cad".
-5. Series: Entiende "Numero de serie", "Serial number", "SN", "Serie", "Serial".
-6. Categorías: Entiende "Departamento", "Depto", "Familia", "Clase", "Seccion".
-7. Pedimento: Entiende "Registro aduanero", "Importacion", "Aduana", "Pedimento".
-8. Placas: Entiende "Matricula", "LPN".
-9. EAN / UPC: Entiende "Codigo de barras", "EAN", "UPC".
-10. Descripciones: Entiende "Descripcion de articulo", "Descripcion", "Descrip".
+[ FILA VIRTUAL DE ATENCIÓN ]
+Todos los AGX solicitados por WhatsApp entran a una "fila virtual". El bot de PC (que hace la programación) los irá atendiendo uno por uno.
+- Si el bot de WhatsApp no responde a tus mensajes en absoluto, significa que el sistema principal está apagado.
+- Si envías tu solicitud y el bot de WhatsApp te responde con un mensaje indicando que el bot de PC está desconectado, tu AGX se quedará guardado en pausa en la fila y será programado automáticamente en cuanto el sistema de PC se vuelva a encender.
 
-### REGLAS DE CONVERSACIÓN
-- Sé conciso, no escribas biblias. 
-- Responde siempre de forma amable y profesional.
-- Si el usuario te envía una lista de datos (ej. "Marbete 5 - Sku 1-8") asumiendo que tú crearás el AGX, recuérdale amablemente que tú solo eres la sección de Ayuda, y que para crear el programa debe presionar "Cancelar" y seguir el flujo del bot respondiendo a las preguntas paso a paso.
+---------------------------------------------------------
+2. REGLA DE ORO PARA "DATOS REQUERIDOS"
+---------------------------------------------------------
+Todo dato que le pidas al escáner DEBE llevar obligatoriamente una longitud (el número mínimo y máximo de caracteres permitidos).
 
-[SYSTEM PROMPT FIN]
+Ejemplos válidos:
+- Marbete 5 (Fija la longitud en exactamente 5 caracteres)
+- SKU 1-13 (Permite escanear entre 1 y 13 caracteres)
+
+* Excepción 1: "Prompt", al ser de solo lectura, no requiere longitud.
+* Excepción 2: La palabra "Cantidad" o "Conteo" es detectada automáticamente por el bot como el campo final numérico y no requiere que le pongas longitud (aunque puedes ponérsela si quieres).
+
+---------------------------------------------------------
+3. PALABRAS CLAVE (COMANDOS ESPECIALES)
+---------------------------------------------------------
+Puedes agregar estas palabras al final de cualquier renglón para activar funciones avanzadas en el escáner. ¡Puedes combinar varias en un mismo dato!
+
+[ VALIDACIÓN Y BASES DE DATOS ]
+• Catálogo : Obliga al escáner a buscar el dato en una base de datos precargada. OJO: El dato sí debe tener longitud (ej. SKU 6-13 Catálogo). Es OBLIGATORIO usar esta palabra si en la pregunta 3 elegiste un archivo "Cerrado" o "Ambos". Sin ella, la validación pierde sentido.
+• Lookup : Configura el campo visualmente como un buscador de base de datos en la pantalla. (Requiere longitud). 
+  IMPORTANTE: En el comando Lookup, la longitud SIEMPRE debe ir a la DERECHA de la palabra (Ej. "Dato Lookup 20"). Si la pones a la izquierda, el sistema podría confundirla y tomarla como parte del texto de la pantalla.
+
+[ MENSAJES EN PANTALLA ]
+• Prompt / Mensaje : Transforma el renglón en un texto estático de solo lectura. El usuario no podrá escribir nada ahí.
+  Ejemplo: "Tipo de conteo: Prompt" (No requiere longitud).
+
+[ CONTROL DE FLUJO ]
+• Bucle / Loop : Crea un "punto de guardado". Cuando el usuario termine de capturar todos los datos y el escáner guarde el registro, en lugar de regresar a la pantalla 1, regresará automáticamente a la pantalla donde pusiste esta palabra.
+  Ejemplo 1: "SKU 13-19 Bucle"
+  Ejemplo 2: "SKU 13-19 Loop"
+
+[ BLOQUEO DE HARDWARE ]
+• Lector / Reader : Apaga el teclado numérico en ese campo. Obliga al usuario a usar únicamente el láser para capturar.
+• Teclado / Keypad : Apaga el láser en ese campo. Obliga al usuario a teclear el dato manualmente.
+  Ejemplo: "Lote 1-10 Teclado"
+
+---------------------------------------------------------
+4. DISEÑO DE PANTALLAS (SALTOS DE LÍNEA)
+---------------------------------------------------------
+Tú controlas cuántas pantallas de diseño (Forms) crea el escáner simplemente usando la tecla "Enter" en tu mensaje de WhatsApp:
+
+• Salto de línea simple (1 Enter): Separa un dato de otro dentro de la MISMA pantalla. (Ej. poner el SKU arriba y el Lote abajo en la misma pantalla).
+• Salto de línea doble (2 Enter): Crea una NUEVA pantalla. Todo lo que esté antes del doble salto quedará en la Pantalla 1, y lo que esté después pasará a la Pantalla 2.
+
+---------------------------------------------------------
+5. DICCIONARIO INTELIGENTE (SINÓNIMOS)
+---------------------------------------------------------
+El bot entiende y corrige automáticamente los nombres de los campos a un estándar limpio en el código fuente, sin importar cómo los escribas. Puedes usar libremente cualquiera de estas familias de palabras:
+
+- Localización: Ubicacion, Marbete, Pasillo, Rack, Nivel, Estante, Posicion, Bahia, Gaveta, Anaquel, Tarima, Pallet.
+- SKU: SKU, SK, SAP, Articulo, Item, Producto, Codigo de producto, CVE.
+- Lotes: Lote, Lotes, Batch.
+- Fechas: Fecha de caducidad, Expiracion, Vencimiento, Caducidad, Cad.
+- Series: Numero de serie, Serial number, SN, Serie, Serial.
+- EAN / UPC: Codigo de barras, EAN, UPC.
+
+---------------------------------------------------------
+6. COMPORTAMIENTOS AUTOMÁTICOS DEL SISTEMA
+---------------------------------------------------------
+El bot realiza varias acciones "tras bambalinas" de las que no tienes que preocuparte al hacer tu solicitud. Sirve como recordatorio de las funciones ya integradas:
+
+• Pantallas de Login Automáticas: No necesitas pedir las pantallas de inicio (donde se pide el nombre del Operador o el Tipo de Conteo). El bot las hereda automáticamente de las plantillas base (`8000 AGX PLANTILLA.AGX` y `8200 AGX PLANTILLA.AGX`). Si necesitas cambiar el diseño base del Login principal, debes editar directamente esos archivos plantilla.
+• Etiquetas Visuales de Menú: El bot restringe el nombre del cliente a 2 renglones en el Menú Principal, y automáticamente agrega la etiqueta `>> ABIERTO <<` o `>> CERRADO <<` en la parte inferior para que los supervisores en piso puedan identificar el modo del escáner rápidamente.
+• Modalidad "Ambos" (Tipos): Si pides un archivo "Ambos", el bot compilará el programa dos veces y te entregará dos archivos separados: Uno con la etiqueta `[A]` (Abierto) y otro con la etiqueta `[C]` (Cerrado, con sus respectivas configuraciones de base de datos activadas).
+• Modalidad "Ambos" (Conteo): Si pides conteo "Ambos" (Pieza x Pieza y Volumen), el bot creará una bifurcación lógica dentro del mismo archivo. El Menú 2 te permitirá elegir entre rutas separadas.
+• Limpieza de Nombres: El bot recorta automáticamente palabras conectoras (como "con", "de", "mínimo", "en") y caracteres especiales sobrantes al final de los renglones, para que en las pantallas del escáner los nombres salgan limpios y no superen el límite de 20 caracteres de Forge AG.
+
+=========================================================

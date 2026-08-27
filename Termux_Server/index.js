@@ -3,8 +3,6 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const os = require('os');
-const { initializeApp, cert } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Inicializar Gemini
@@ -14,7 +12,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // INTEGRACIÓN DEL COTIZADOR
 // ==========================================
 const { handleMessage: handleCotizadorMessage, sessions: cotizadorSessions } = require('./cotizadorFlow');
-const { getCatalog, getQuote, saveQuote } = require('./supabase');
+const { supabase, getCatalog, getQuote, saveQuote } = require('./supabase');
 const { generatePDF } = require('./pdfGenerator');
 
 let cotizadorCatalog = {};
@@ -149,18 +147,8 @@ try {
     console.warn("⚠️ Error al leer MANUAL_WHATSAPP.txt:", e.message);
 }
 
-// Inicializar Firebase
-try {
-    const serviceAccount = require('./firebase_key.json');
-    initializeApp({
-      credential: cert(serviceAccount)
-    });
-    console.log("✅ Conectado a Firebase Firestore (Nube de Google).");
-} catch(e) {
-    console.log("⚠️ Advertencia al conectar a Firebase:", e.message);
-}
-
-const db = getFirestore();
+// Firebase removido en favor de Supabase
+console.log("✅ Conectado a Supabase correctamente.");
 
 function getHistorialFile() {
     const fecha = new Date();
@@ -177,7 +165,7 @@ function getHistorialFile() {
 // ==========================================
 // PREGUNTAS DEL FORMULARIO HÍBRIDO
 // ==========================================
-const Q_MODELO = '🤖 `¡Hola! Soy tu asistente para crear AGX.`\n\nRecuerda que puedes escribir en cualquier momento:\n`Ayuda` = Obtener ayuda sobre el bot de creación de AGX.\n`Cancelar` = Para cancelar la petición.\n`Regresar` = Para regresar a la pregunta anterior.\n\n¿Qué modelo de terminal usarás?\n\n`1`. 8000\n`2`. 8000v2\n`3`. 8200\n`4`. Todos';
+const Q_MODELO = '🤖 `¡Hola! Soy tu asistente para crear AGX.`\n\nRecuerda que puedes escribir en cualquier momento:\n`Ayuda` = Obtener ayuda sobre el bot de creación de AGX.\n`Cancelar` = Para cancelar la petición.\n`Regresar` = Para regresar a la pregunta anterior.\n\n¿Qué modelo de terminal usarás?\n\n`1`. 8000\n`2`. 8200\n`3`. Ambos';
 const Q_INVENTARIO = '¿Cuál es el nombre del Inventario? (Ej. `Soriana`, `Walmart`, `Bodega Aurrera`)';
 const Q_TIPO = '¿De qué tipo será?\n_Forzado es igual a Abierto._\n\n`1`. Abierto (Forzado).\n`2`. Cerrado.\n`3`. Ambos.';
 const Q_FLUJO = '¿Cuál será el Flujo Operativo (Conteo)?\n\n`1`. Pieza x Pieza.\n`2`. Volumen.\n`3`. Ambos.';
@@ -254,7 +242,12 @@ const puppeteerOptions = {
         '--disable-gpu',
         '--disable-gpu-compositing',
         '--disable-software-rasterizer',
-        '--mute-audio'
+        '--mute-audio',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
     ]
 };
 
@@ -324,6 +317,16 @@ client.on('ready', () => {
     console.log('✅ Cliente de WhatsApp listo. Escuchando mensajes...');
 });
 
+client.on('disconnected', (reason) => {
+    console.log('❌ WhatsApp Web fue desconectado. Razón:', reason);
+    console.log('🔄 Reiniciando el cliente automáticamente...');
+    client.destroy().then(() => {
+        client.initialize();
+    }).catch(() => {
+        client.initialize();
+    });
+});
+
 // Usamos message_create para escuchar también nuestros propios mensajes (auto-pausa)
 client.on('message_create', async msg => {
     const from_chat = msg.from;
@@ -334,6 +337,8 @@ client.on('message_create', async msg => {
     // AUTO-PAUSA: Cuando el anfitrión responde manualmente
     // ------------------------------------------
     if (isFromMe) {
+        if (msg.hasMedia) return;
+        
         if (typeof msg.body === 'string' && botSentTexts.has(msg.body.trim())) {
             return;
         }
@@ -532,10 +537,10 @@ client.on('message_create', async msg => {
         // ==========================================
         if (session.step === 0) {
             if (bodyLower === '1') { session.datos.Modelo = '8000'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else if (bodyLower === '2') { session.datos.Modelo = '8000v2'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else if (bodyLower === '3') { session.datos.Modelo = '8200'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else if (bodyLower === '4' || bodyLower === 'todos') { session.datos.Modelo = 'Todos'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
-            else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1, 2, 3 o 4.`'); }
+            else if (bodyLower === '2') { session.datos.Modelo = '8200'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else if (bodyLower === '3' || bodyLower === 'ambos') { session.datos.Modelo = 'Ambos'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else if (bodyLower === '4' || bodyLower === 'todos' || bodyLower === '8000v2') { session.datos.Modelo = '8000v2'; session.step = 1; await client.sendMessage(user_id, Q_INVENTARIO); }
+            else { await client.sendMessage(user_id, '`⚠️ Opción inválida. Responde 1, 2 o 3.`'); }
             return;
         }
         else if (session.step === 1) {
@@ -563,8 +568,8 @@ client.on('message_create', async msg => {
             // VALIDACIÓN DE AGX CERRADO
             // ==========================================
             if (session.datos.Tipo === 'Cerrado' || session.datos.Tipo === 'Ambos') {
-                if (!bodyLower.includes('lookup') && !bodyLower.includes('catalogo')) {
-                    await client.sendMessage(user_id, '`⚠️ Tu solicitud requiere un archivo cerrado, pero no indicaste qué dato se va a validar.`\n\nPara los AGX Cerrados, debes especificar qué campo cruzará contra la base de datos agregando la palabra *"Lookup"* o *"Catálogo"*. \n\n*Ejemplo correcto:*\nSKU 1-13 (Lookup)\nCantidad 1-5\n\nPor favor, vuelve a enviar tus datos con esta corrección.');
+                if (!bodyLower.includes('catalogo')) {
+                    await client.sendMessage(user_id, '`⚠️ Tu solicitud requiere un archivo cerrado, pero no indicaste qué dato se va a validar.`\n\nPara los AGX Cerrados, debes especificar qué campo cruzará contra la base de datos agregando la palabra *"Catálogo"*. \n\n*Ejemplo correcto:*\nSKU 1-13 Catálogo\nCantidad 1-5\n\nPor favor, vuelve a enviar tus datos con esta corrección.');
                     return;
                 }
             }
@@ -577,17 +582,37 @@ client.on('message_create', async msg => {
                 
                 // Separar el texto en Bloques usando doble salto de línea
                 let rawBlocks = body.replace(/\r\n/g, '\n').split(/\n\s*\n/).filter(b => b.trim() !== '');
-                
+                let correctedAllBlocks = [];
                 let locBlocks = [];
                 let dataBlocks = [];
-                let correctedAllBlocks = [];
                 
-                const palabrasLargas = ['ubicacion', 'marbete', 'cantidad', 'caducidad', 'descripcion', 'pedimento'];
-                
+                // Diccionario Maestro (Clon de DICCIONARIO_NOMBRES_CORTOS de Python y otras comunes)
+                const diccMaestro = {
+                    "fecha de caducidad": "Caducidad", "fecha caducidad": "Caducidad", "fecha de vencimiento": "Caducidad",
+                    "vencimiento": "Caducidad", "caducidad": "Caducidad", "cad": "Caducidad",
+                    "numero de serie": "Serie", "numero serial": "Serie", "serial number": "Serie", "serie": "Serie", "serial": "Serie",
+                    "registro aduanero": "Pedimento", "mercancia importada": "Pedimento", "importacion": "Pedimento", "pedimento": "Pedimento",
+                    "numero de matricula": "LPN", "matricula": "LPN", "lpn": "LPN",
+                    "codigo de barras": "C.Barras", "codigo de barra": "C.Barras", "barras": "C.Barras", "ean": "EAN", "upc": "C.Barras",
+                    "codigo interno": "C.Interno", "codigo cliente": "C.Cliente", "interno": "C.Interno",
+                    "descripcion de articulo": "Descrip.", "descripcion": "Descrip.", "descrip": "Descrip.",
+                    "id terminal": "Terminal", "ns del scaner": "Scanner", "scanner": "Scanner", "terminal": "Terminal",
+                    "numero de caja": "Caja", "caja": "Caja", "cajas": "Caja",
+                    "unidades de medida": "U.Medida", "unidad de medida": "U.Medida", "unidad": "U.Medida", "medida": "U.Medida",
+                    "codigo de producto": "C.Producto", "producto": "C.Producto",
+                    "departamento": "Depto.", "depto": "Depto.",
+                    "ubicacion": "Ubicacion", "marbete": "Marbete", "cantidad": "Cantidad",
+                    "sku": "SKU", "sap": "SKU", "articulo": "SKU", "item": "SKU", "cve": "SKU",
+                    "estado": "Estado", "condicion": "Estado", "estatus": "Estado",
+                    "color": "Color", "talla": "Talla", "modelo": "Modelo", "marca": "Marca", "lote": "Lote"
+                };
+                const dictKeys = Object.keys(diccMaestro);
+
+                let validationErrorMsg = null;
+
                 rawBlocks.forEach(bloqueStr => {
                     let camposCrudos = bloqueStr.split(/\n/).map(f => f.trim()).filter(f => f !== '');
                     let chunkedCampos = [];
-                    // Dividir arreglos mayores a 6 variables (límite del modelo 8000)
                     for (let i = 0; i < camposCrudos.length; i += 6) {
                         chunkedCampos.push(camposCrudos.slice(i, i + 6));
                     }
@@ -597,65 +622,119 @@ client.on('message_create', async msg => {
                         let hasLocalizacion = false;
                         
                         chunk.forEach(field => {
-                            let justWords = field.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z\s]/g, "").trim();
-                            let words = justWords.split(' ');
+                            // 1. Quitar basura del final y puntuacion (El Embudo)
+                            let limpio = field.replace(/\s+(con|de|mínimo|minimo|en|a|al|hasta)$/i, '').trim();
+                            limpio = limpio.replace(/[;,.\-:]+$/, '').trim();
                             
-                            let correctedWords = words.map(w => {
-                                if (w.length >= 6) {
-                                    let match = stringSimilarity.findBestMatch(w, palabrasLargas);
-                                    if (match.bestMatch.rating > 0.75) return match.bestMatch.target;
-                                }
-                                return w;
-                            });
+                            // 2. Extraer parte literal (Nombre) vs parte matemática/catálogo
+                            let matchNombre = limpio.match(/^([^0-9:]+)/);
+                            if (!matchNombre) {
+                                correctedFields.push(limpio);
+                                return;
+                            }
                             
-                            let correctedString = correctedWords.join(' ');
-                            let finalField = field;
+                            let nombreParte = matchNombre[1].trim();
+                            // Strip keywords that might be caught in nombreParte if there are no numbers
+                            let strippedNombre = nombreParte.replace(/(?:\s+(catalogo|lookup|prompt|mensaje|bucle|loop|teclado|keypad|lector|reader))+$/i, '').trim();
                             
-                            let numIndex = finalField.search(/\d/);
-                            if (numIndex !== -1) {
-                                let promptPart = finalField.substring(0, numIndex);
-                                let rest = finalField.substring(numIndex);
-                                if (correctedString.includes('ubicacion')) promptPart = 'Ubicacion ';
-                                else if (correctedString.includes('marbete')) promptPart = 'Marbete ';
-                                else if (correctedString.includes('caducidad')) promptPart = 'F.Caducidad ';
-                                else if (correctedString.includes('cantidad')) promptPart = 'Cantidad ';
-                                else if (correctedString.includes('codigo de barras')) promptPart = 'C de Barras ';
-                                else if (correctedString.includes('unidad de medida')) promptPart = 'Unid.Medida ';
-                                finalField = promptPart + rest;
+                            // Si se borró todo (ej. el field era solo "Catálogo"), restauramos nombreParte original para que pase por isReserved
+                            if (strippedNombre.length > 0) {
+                                // Mover la keyword removida hacia restoStr
+                                let removedKeyword = nombreParte.substring(strippedNombre.length).trim();
+                                field = field.replace(nombreParte, strippedNombre + " " + removedKeyword);
+                                nombreParte = strippedNombre;
+                            }
+                            
+                            // Quitar acentos y a minúsculas
+                            let nombreParteLower = nombreParte.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            
+                            // 3. Mapeo Inteligente
+                            let nombreFinal = nombreParte;
+                            let bestMatch = stringSimilarity.findBestMatch(nombreParteLower, dictKeys);
+                            
+                            if (bestMatch.bestMatch.rating > 0.70) {
+                                nombreFinal = diccMaestro[bestMatch.bestMatch.target];
                             } else {
-                                if (correctedString.includes('ubicacion')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Ubicacion');
-                                else if (correctedString.includes('marbete')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Marbete');
-                                else if (correctedString.includes('caducidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'F.Caducidad');
-                                else if (correctedString.includes('cantidad')) finalField = finalField.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/, 'Cantidad');
-                                else if (correctedString.includes('codigo de barras')) finalField = finalField.replace(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+/, 'C de Barras ');
-                                else if (correctedString.includes('unidad de medida')) finalField = finalField.replace(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+/, 'Unid.Medida ');
+                                // Fallbacks
+                                if (nombreParteLower.includes("ean")) nombreFinal = "EAN";
+                                else nombreFinal = nombreParte.charAt(0).toUpperCase() + nombreParte.slice(1).toLowerCase();
                             }
                             
-                            let matchNum = finalField.match(/^(.+?)\s+(\d+)$/);
-                            if (matchNum) {
-                                finalField = `${matchNum[1].trim()} ${matchNum[2]}-${matchNum[2]}`;
-                            }
-                            
-                            correctedFields.push(finalField);
-                            
-                            let checkLower = finalField.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                            if (checkLower.includes('marbete') || checkLower.includes('ubicacion')) {
+                            // Verificar Localización
+                            if (nombreFinal === "Ubicacion" || nombreFinal === "Marbete") {
                                 hasLocalizacion = true;
                             }
+                            
+                            // 4. Rango y números (Regla "5" -> "5-5")
+                            let restoStr = field.substring(nombreParte.length).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            let rangoFinal = "";
+                            let rangoMatch = restoStr.match(/(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)/);
+                            if (rangoMatch) {
+                                rangoFinal = `${rangoMatch[1]}-${rangoMatch[2]}`;
+                            } else {
+                                let numMatch = restoStr.match(/\b(\d+)\b/);
+                                if (numMatch) rangoFinal = `${numMatch[1]}-${numMatch[1]}`;
+                            }
+                            
+                            // 5. Catálogo
+                            let sufijoCat = "";
+                            let catMatch = restoStr.match(/\b(catalogo)\b(.*)/);
+                            if (catMatch) {
+                                let argCat = catMatch[2].replace(/[;,.\-:]+$/, '').trim();
+                                sufijoCat = argCat ? ` catálogo ${argCat}` : ' catálogo';
+                            }
+                            
+                            // Bucle
+                            let hasBucle = /\b(bucle|loop)\b/i.test(restoStr);
+                            let suffixBucle = hasBucle ? " bucle" : "";
+                            
+                            // Prompt y Lookup (Tipos de datos sin longitud)
+                            let isPrompt = /\b(prompt|mensaje)\b/i.test(restoStr);
+                            let suffixPrompt = isPrompt ? " prompt" : "";
+                            
+                            let isLookupType = /\b(lookup)\b/i.test(restoStr);
+                            let suffixLookup = isLookupType ? " lookup" : "";
+                            
+                            // Input Type
+                            let suffixInput = "";
+                            if (/\b(teclado|keypad)\b/i.test(restoStr)) suffixInput = " teclado";
+                            else if (/\b(lector|reader)\b/i.test(restoStr)) suffixInput = " lector";
+                            
+                            // Validación estricta
+                            let isCantidad = nombreFinal.toLowerCase() === 'cantidad';
+                            let isReserved = ['catalogo', 'lookup', 'prompt', 'mensaje', 'bucle', 'loop', 'teclado', 'keypad', 'lector', 'reader'].includes(nombreParteLower.trim());
+                            
+                            if (!rangoFinal && !isPrompt && !isCantidad && !isReserved) {
+                                validationErrorMsg = `\`⚠️ Faltan datos en:\` *${field}*\n\nRecuerda que cada dato debe especificar su longitud (ej. *1-5*), o bien, un tipo especial como *Prompt* o *Lookup* si no llevan longitud.\n\nPor favor, corrige ese renglón y vuelve a enviar tus datos requeridos completos.`;
+                            } else if (sufijoCat && (isPrompt || isLookupType)) {
+                                validationErrorMsg = `\`⚠️ Contradicción en:\` *${field}*\n\nNo es posible usar "Catálogo" y "Prompt/Lookup" al mismo tiempo en un mismo renglón, ya que son excluyentes. Por favor, elige solo uno y vuelve a enviar tus datos.`;
+                            } else if (isPrompt && isLookupType) {
+                                validationErrorMsg = `\`⚠️ Contradicción en:\` *${field}*\n\nNo es posible usar "Prompt" y "Lookup" al mismo tiempo en un mismo renglón. Por favor, elige solo uno y vuelve a enviar tus datos.`;
+                            }
+                            
+                            let finalField = nombreFinal;
+                            if (rangoFinal) finalField += ` ${rangoFinal}`;
+                            if (sufijoCat) finalField += sufijoCat;
+                            if (hasBucle) finalField += ` bucle`;
+                            if (isPrompt) finalField += ` prompt`;
+                            if (isLookupType) finalField += ` lookup`;
+                            if (suffixInput) finalField += suffixInput;
+                            
+                            correctedFields.push(finalField.trim());
                         });
                         
                         let bloqueCorregidoStr = correctedFields.join('\n');
                         correctedAllBlocks.push(bloqueCorregidoStr);
-                        
-                        if (hasLocalizacion) {
-                            locBlocks.push(bloqueCorregidoStr);
-                        } else {
-                            dataBlocks.push(bloqueCorregidoStr);
-                        }
+                        if (hasLocalizacion) locBlocks.push(bloqueCorregidoStr);
+                        else dataBlocks.push(bloqueCorregidoStr);
                     });
                 });
                 
-                // Guardar la cadena limpia con dobles saltos de línea para Python
+                if (validationErrorMsg) {
+                    await client.sendMessage(user_id, validationErrorMsg);
+                    return;
+                }
+                
                 session.datos.Datos = correctedAllBlocks.join('\n\n');
                 session.pendingData = session.datos; 
                 session.step = 5;
@@ -673,7 +752,7 @@ client.on('message_create', async msg => {
 
                 let displayTipo = session.datos.Tipo === 'Ambos' ? 'Abierto y Cerrado' : session.datos.Tipo;
                 let displayFlujo = session.datos.Flujo === 'Ambos' ? 'Pz x Pz y Volumen' : session.datos.Flujo;
-                let displayModelo = session.datos.Modelo === 'Todos' ? '8000, 8000v2 y 8200' : session.datos.Modelo;
+                let displayModelo = session.datos.Modelo === 'Ambos' ? '8000 y 8200' : (session.datos.Modelo === 'Todos' ? '8000, 8000v2 y 8200' : session.datos.Modelo);
 
                 let screenText = '\`Revisa bien la información recopilada antes de enviarla:\`\n\n';
                 screenText += `- \`Inventario:\` ${session.datos.Inventario}\n`;
@@ -721,148 +800,227 @@ async function processFinalAGX(user_id, parsed, session) {
     const pad = (n) => n.toString().padStart(2, '0');
     const readableDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
     
-    const modelosAProcesar = parsed.Modelo === 'Todos' ? ['8000', '8000v2', '8200'] : [parsed.Modelo];
+    const modelosAProcesar = parsed.Modelo === 'Ambos' ? ['8000', '8200'] : (parsed.Modelo === 'Todos' ? ['8000', '8000v2', '8200'] : [parsed.Modelo]);
+    const tiposAProcesar = parsed.Tipo === 'Ambos' ? ['Abierto', 'Cerrado'] : [parsed.Tipo];
 
+    let reqIndex = 0;
+    let cacheMisses = 0;
     for (let i = 0; i < modelosAProcesar.length; i++) {
         const modeloStr = modelosAProcesar[i];
-        const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        const userPhone = user_id.split('@')[0];
-        const id_solicitud = `${userPhone}_${readableDate}_${rand}_${i}`;
-
-        const documentData = {
-            "1_Estado_de_Orden": {
-                "Estatus": "PENDIENTE",
-                "Fecha_Legible": `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
-                "Entregado_al_usuario": false
-            },
-            "2_Respuestas_del_Cliente": {
-                "Modelo_AGX": modeloStr || "",
-                "Cliente": parsed.Inventario || "",
-                "Tipo": parsed.Tipo || "",
-                "Flujo_Operativo": parsed.Flujo || "",
-                "Variables_Requeridas": parsed.Datos || ""
-            },
-            "3_Metadatos_Internos": {
-                "id_solicitud": id_solicitud,
-                "chat_id": session.chat_id,
-                "mention_id": session.mention_id || null
-            },
-            "ESTATUS": "PENDIENTE"
-        };
-
-        if (db) {
-            try {
-                await db.collection('solicitudes').doc(id_solicitud).set(documentData);
-                console.log(`➤ Solicitud Híbrida ${id_solicitud} subida a Firebase exitosamente (Modelo: ${modeloStr}).`);
-            } catch(e) {
-                console.log('⚠️ Error al subir a Firebase:', e);
-            }
-        }
         
-        let nextId = 1;
-        const currentHistorial = getHistorialFile();
-        if (fs.existsSync(currentHistorial)) {
-            const data = fs.readFileSync(currentHistorial, 'utf8').trim().split('\n');
-            if (data.length > 0 && data[0] !== "") {
-                const lastLine = data[data.length - 1];
-                const parts = lastLine.split('|');
-                if (parts.length > 0) {
-                    const lastId = parseInt(parts[0], 10);
-                    if (!isNaN(lastId)) {
-                        nextId = lastId + 1;
+        for (let j = 0; j < tiposAProcesar.length; j++) {
+            const tipoStr = tiposAProcesar[j];
+            reqIndex++;
+            const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const userPhone = user_id.split('@')[0];
+            const id_solicitud = `${userPhone}_${readableDate}_${rand}_${reqIndex}`;
+
+            if (supabase) {
+                try {
+                    // 1. Buscar en Caché (Ignorando Nombre_AGX / Inventario)
+                    const { data: existing, error: searchError } = await supabase
+                        .from('AGX')
+                        .select('Archivos_AGX')
+                        .eq('Modelo_AGX', modeloStr)
+                        .eq('Tipo_AGX', tipoStr)
+                        .eq('Flujo_AGX', parsed.Flujo)
+                        .contains('Datos_AGX', { Variables_Requeridas: parsed.Datos || "" })
+                        .in('Status_AGX', ['Finalizado', 'Entregado', 'Entregado (Caché)'])
+                        .not('Archivos_AGX', 'is', null)
+                        .limit(1);
+                    
+                    let isCacheHit = false;
+                    let cachedArchivos = null;
+                    if (existing && existing.length > 0 && existing[0].Archivos_AGX && existing[0].Archivos_AGX.length > 0) {
+                        isCacheHit = true;
+                        cachedArchivos = existing[0].Archivos_AGX;
+                        console.log(`➤ [CACHÉ HIT] Encontrado AGX idéntico para Modelo: ${modeloStr}, Tipo: ${tipoStr}. Enviando desde caché...`);
+                    }
+
+                    // 2. Insertar fila en base de datos
+                    const statusToInsert = isCacheHit ? 'Entregado (Caché)' : 'Recibido';
+                    if (!isCacheHit) cacheMisses++;
+                    
+                    const { error } = await supabase.from('AGX').insert({
+                        Modelo_AGX: modeloStr || "",
+                        Nombre_AGX: parsed.Inventario || "",
+                        Tipo_AGX: tipoStr || "",
+                        Flujo_AGX: parsed.Flujo || "",
+                        Datos_AGX: {
+                            Variables_Requeridas: parsed.Datos || ""
+                        },
+                        Status_AGX: statusToInsert,
+                        Archivos_AGX: isCacheHit ? cachedArchivos : null,
+                        Chat_id: session.chat_id,
+                        Mention_id: session.mention_id || null
+                    });
+                    
+                    if (error) throw error;
+                    console.log(`➤ Solicitud Híbrida subida a Supabase exitosamente (Modelo: ${modeloStr}, Tipo: ${tipoStr}, Estatus: ${statusToInsert}).`);
+
+                    // 3. Si fue Caché Hit, enviamos el archivo de inmediato al usuario
+                    if (isCacheHit) {
+                        let msgText = '```✅ ¡AGX recuperado desde Caché exitosamente!```';
+                        if (session.mention_id) {
+                            msgText = `\`\`\`✅ ¡AGX recuperado desde Caché exitosamente!\`\`\``;
+                        }
+                        await client.sendMessage(session.chat_id, msgText);
+                        await enviarArchivosHelper(client, session.chat_id, cachedArchivos);
+                    }
+
+                } catch(e) {
+                    console.log('⚠️ Error al interactuar con Supabase:', e.message);
+                }
+            }
+            
+            let nextId = 1;
+            const currentHistorial = getHistorialFile();
+            if (fs.existsSync(currentHistorial)) {
+                const data = fs.readFileSync(currentHistorial, 'utf8').trim().split('\n');
+                if (data.length > 0 && data[0] !== "") {
+                    const lastLine = data[data.length - 1];
+                    const parts = lastLine.split('|');
+                    if (parts.length > 0) {
+                        const lastId = parseInt(parts[0], 10);
+                        if (!isNaN(lastId)) {
+                            nextId = lastId + 1;
+                        }
                     }
                 }
             }
+            const paddedId = String(nextId).padStart(5, '0');
+            const datosReq = (parsed.Datos || '').replace(/\n/g, ' - ');
+            const phone = user_id.split('@')[0];
+            const fechaRaw = new Date();
+            const fecha = fechaRaw.toLocaleDateString('es-MX');
+            const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
+            const logLine = `${paddedId}|${fecha}|${hora}|${parsed.Inventario}|${modeloStr}|${tipoStr}|${parsed.Flujo}|N/A|N/A|${datosReq}|${phone}\n`;
+            fs.appendFileSync(currentHistorial, logLine);
+            
+            const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
+            console.log(`➤ [${fechaStr}] Nueva solicitud Híbrida: "${parsed.Inventario}" para modelo ${modeloStr} y tipo ${tipoStr}`);
         }
-        const paddedId = String(nextId).padStart(5, '0');
-        const datosReq = (parsed.Datos || '').replace(/\n/g, ' - ');
-        const phone = user_id.split('@')[0];
-        const fechaRaw = new Date();
-        const fecha = fechaRaw.toLocaleDateString('es-MX');
-        const hora = fechaRaw.toLocaleTimeString('es-MX', { hour12: false });
-        const logLine = `${paddedId}|${fecha}|${hora}|${parsed.Inventario}|${modeloStr}|${parsed.Tipo}|${parsed.Flujo}|N/A|N/A|${datosReq}|${phone}\n`;
-        fs.appendFileSync(currentHistorial, logLine);
-        
-        const fechaStr = new Date().toLocaleString('es-MX', { hour12: false }).replace(', ', '|');
-        console.log(`➤ [${fechaStr}] Nueva solicitud Híbrida: "${parsed.Inventario}" para modelo ${modeloStr}`);
     }
 
-    const msgExtra = modelosAProcesar.length > 1 ? `\n(Se procesarán ${modelosAProcesar.length} plantillas: ${modelosAProcesar.join(', ')})` : '';
-    await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada al generador AGX.```' + msgExtra + '\n\n```Todos tus pedidos quedan en fila y se generarán en breve.```');
-    
-    try {
-        const serverState = await db.collection('configuracion').doc('estado_servidor').get();
-        let isOffline = true;
-        if (serverState.exists) {
-            const data = serverState.data();
-            const ultimo_latido = data.ultimo_latido || 0;
-            const ahora = Date.now() / 1000;
-            if (ahora - ultimo_latido <= 180) {
-                isOffline = false;
+    if (cacheMisses > 0) {
+        const msgExtra = cacheMisses > 1 ? `\n(Se procesarán ${cacheMisses} plantillas)` : '';
+        await client.sendMessage(user_id, '`¡Listo!` ```Solicitud enviada al generador AGX.```' + msgExtra + '\n\n```Todos tus pedidos quedan en fila y se generarán en breve.```');
+        
+        try {
+            const { data: serverState, error } = await supabase.from('configuracion').select('*').eq('id', 'estado_servidor').single();
+            let isOffline = true;
+            if (serverState && !error) {
+                const ultimo_latido = serverState.ultimo_latido || 0;
+                const ahora = Date.now() / 1000;
+                if (ahora - ultimo_latido <= 180) {
+                    isOffline = false;
+                }
             }
+            if (isOffline) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await client.sendMessage(user_id, '```⚠️ Nota: El servidor de Sistemas parece estar fuera de línea, pero no te preocupes, tu solicitud quedó en la "fila virtual" y se procesará automáticamente en cuanto vuelva a estar en línea.```');
+            }
+        } catch (e) {
+            console.error("Error al verificar latido del servidor (Supabase):", e.message);
         }
-        if (isOffline) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await client.sendMessage(user_id, '```⚠️ Nota: El servidor de Sistemas Python parece estar fuera de línea. Tu solicitud quedó en la "fila virtual" y se procesará automáticamente en cuanto regrese.```');
-        }
-    } catch (e) {
-        console.error("Error al verificar latido del servidor:", e);
     }
 
     clearUserTimeouts(sessions[user_id]);
     delete sessions[user_id];
 }
 
+async function enviarArchivosHelper(client, chat_id, archivos_agx) {
+    if (!archivos_agx || archivos_agx.length === 0) return;
+    
+    for (let archivo of archivos_agx) {
+        let intentos = 0;
+        let enviado = false;
+        while (!enviado && intentos < 3) {
+            try {
+                const response = await fetch(archivo.url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const base64data = Buffer.from(arrayBuffer).toString('base64');
+                const mimetype = response.headers.get('content-type') || 'application/x-zip-compressed';
+                
+                const media = new MessageMedia(mimetype, base64data, archivo.file_name || 'AGX_Generado.zip');
+                if (chat_id) await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
+                enviado = true;
+            } catch (err_envio) {
+                intentos++;
+                console.log(`⚠️ Fallo al enviar archivo (intento ${intentos}):`, err_envio.message);
+                if (intentos >= 3) {
+                    console.log("Abortando envio del archivo.");
+                    break; 
+                }
+                await new Promise(r => setTimeout(r, 5000));
+            }
+        }
+    }
+}
+
 client.initialize();
 
-client.on('ready', () => {
-    if (db) {
-        db.collection('solicitudes').where('ESTATUS', '==', 'COMPLETADO').onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach(async (change) => {
-                if (change.type === 'added' || change.type === 'modified') {
-                    const data = change.doc.data();
-                    if (data.archivos && !data.entregado_al_usuario) {
-                        const meta = data['3_Metadatos_Internos'] || data;
-                        const chat_id = meta.chat_id;
-                        const mention_id = meta.mention_id;
+client.on('ready', async () => {
+    if (supabase) {
+        // Barrido inicial para recuperar archivos 'Finalizados' que no se enviaron por estar offline
+        try {
+            console.log("🔍 Buscando archivos 'Finalizados' pendientes de envío...");
+            const { data: missedRows, error } = await supabase.from('AGX').select('*').eq('Status_AGX', 'Finalizado');
+            if (!error && missedRows && missedRows.length > 0) {
+                console.log(`📦 Se encontraron ${missedRows.length} envíos pendientes. Procesando...`);
+                for (const data of missedRows) {
+                    if (data.Archivos_AGX && data.Archivos_AGX.length > 0) {
+                        try {
+                            let msgText = '```✅ ¡AGX generado exitosamente!```';
+                            if (data.Chat_id) await client.sendMessage(data.Chat_id, msgText);
+                            await enviarArchivosHelper(client, data.Chat_id, data.Archivos_AGX);
+                            await supabase.from('AGX').update({ Status_AGX: 'Entregado' }).eq('AGX_id', data.AGX_id);
+                            console.log(`➤ Recuperado y enviado AGX id: ${data.AGX_id}`);
+                        } catch (err) {
+                            console.log(`❌ Error al recuperar y enviar AGX:`, err.message);
+                        }
+                    }
+                }
+            }
+        } catch(e) {
+            console.error("Error en barrido inicial:", e.message);
+        }
+
+        const agxChannel = supabase.channel('agx_updates')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'AGX', filter: "Status_AGX=eq.Finalizado" },
+                async (payload) => {
+                    const data = payload.new;
+                    if (data.Archivos_AGX && data.Archivos_AGX.length > 0) {
+                        const chat_id = data.Chat_id;
+                        const mention_id = data.Mention_id;
                         
                         try {
                             let msgText = '```✅ ¡AGX generado exitosamente!```';
                             if (mention_id) {
                                 msgText = `\`\`\`✅ ¡AGX generado exitosamente!\`\`\``;
                             }
-                            await client.sendMessage(chat_id, msgText);
+                            if (chat_id) await client.sendMessage(chat_id, msgText);
 
-                            for (let archivo of data.archivos) {
-                                let intentos = 0;
-                                let enviado = false;
-                                while (!enviado && intentos < 3) {
-                                    try {
-                                        const media = new MessageMedia('application/octet-stream', archivo.file_base64, archivo.file_name || 'AGX_Generado.agx');
-                                        await client.sendMessage(chat_id, media, { sendMediaAsDocument: true });
-                                        enviado = true;
-                                    } catch (err_envio) {
-                                        intentos++;
-                                        console.log(`⚠️ Fallo al enviar archivo (intento ${intentos}):`, err_envio.message);
-                                        if (intentos >= 3) {
-                                            throw err_envio; 
-                                        }
-                                        await new Promise(r => setTimeout(r, 5000));
-                                    }
-                                }
-                            }
+                            await enviarArchivosHelper(client, chat_id, data.Archivos_AGX);
                             
-                            let fileNames = data.archivos.map(a => a.file_name || 'AGX_Generado.agx').join(', ');
-                            console.log(`➤ Se enviaron ${data.archivos.length} archivos: ${fileNames}`);
-                            await change.doc.ref.update({ entregado_al_usuario: true });
+                            let fileNames = data.Archivos_AGX.map(a => a.file_name || 'AGX_Generado.zip').join(', ');
+                            console.log(`➤ Se enviaron ${data.Archivos_AGX.length} archivos: ${fileNames}`);
+                            
+                            await supabase.from('AGX').update({ Status_AGX: 'Entregado' }).eq('AGX_id', data.AGX_id);
 
                         } catch (err) {
-                            console.log(`❌ Error al enviar el archivo devuelta por WhatsApp:`, err);
+                            console.log(`❌ Error al enviar el archivo de vuelta por WhatsApp:`, err.message);
                         }
                     }
                 }
+            )
+            .subscribe((status) => {
+                if(status === 'SUBSCRIBED') {
+                    console.log("📡 Escuchando respuestas de la PC a través de Supabase Realtime...");
+                }
             });
-        });
-        console.log("📡 Escuchando respuestas de la PC a través de Firebase...");
     }
 });

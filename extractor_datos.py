@@ -153,6 +153,7 @@ def procesar_solicitud(solicitud):
             
             nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en|a|al|hasta)$', '', match_nombre.group(1).strip()).strip()
             nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
+            nombre_original = re.sub(r'(?i)(?:\s+(?:catalogo|lookup|prompt|mensaje|bucle|loop|teclado|keypad|lector|reader))+$', '', nombre_original).strip()
             
             nombre_original_lower = limpiar_texto(nombre_original)
             for largo, corto in DICCIONARIO_NOMBRES_CORTOS.items():
@@ -163,38 +164,65 @@ def procesar_solicitud(solicitud):
             if "ean" in nombre_original_lower:
                 nombre_original = "EAN"
                 
+            if nombre_original_lower in ['catalogo', 'lookup', 'prompt', 'mensaje', 'bucle', 'loop', 'teclado', 'keypad', 'lector', 'reader']:
+                nombre_original = ""
+                
             nombre_logico = limpiar_texto(nombre_original)
             
             longitud_base = "1-10" if "cantidad" in nombre_logico else "3-15"
             min_max_final = longitud_base
+            tiene_longitud = False
             
             rango_match = re.search(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', linea_limpia)
             if rango_match:
                 min_max_final = f"{rango_match.group(1)}-{rango_match.group(2)}"
+                tiene_longitud = True
             else:
                 num_match = re.search(r'\b(\d+)\b', linea_limpia)
-                if num_match: min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
+                if num_match: 
+                    min_max_final = f"{num_match.group(1)}-{num_match.group(1)}"
+                    tiene_longitud = True
                 
-            if "marbete" in nombre_logico:
-                tipo_bruto = "entero"
-            else:
-                tipo_bruto = "texto"
-                    
             linea_limpia_sin_acentos = limpiar_texto(linea)
-            match_cat = re.search(r'\b(catalogo|lookup|bd|base de datos)\b(.*)', linea_limpia_sin_acentos)
+            match_cat = re.search(r'\b(catalogo)\b(.*)', linea_limpia_sin_acentos)
             if match_cat:
                 es_catalogo = True
                 id_catalogo = match_cat.group(2).strip()
             else:
                 es_catalogo = False
                 id_catalogo = ""
+                
+            es_prompt = bool(re.search(r'\b(prompt|mensaje)\b', linea_limpia_sin_acentos))
+            es_lookup_type = bool(re.search(r'\b(lookup)\b', linea_limpia_sin_acentos))
+            
+            if es_prompt:
+                tipo_bruto = "prompt"
+                min_max_final = "-"
+                es_catalogo = False
+            elif es_lookup_type:
+                tipo_bruto = "lookup"
+                es_catalogo = True
+            elif not tiene_longitud:
+                tipo_bruto = "entero" if "marbete" in nombre_logico else "texto"
+            else:
+                tipo_bruto = "entero" if "marbete" in nombre_logico else "texto"
+                    
+            es_bucle = bool(re.search(r'\b(bucle|loop)\b', linea_limpia_sin_acentos))
+            
+            input_type = "both"
+            if bool(re.search(r'\b(teclado|keypad)\b', linea_limpia_sin_acentos)):
+                input_type = "keypad"
+            elif bool(re.search(r'\b(lector|reader)\b', linea_limpia_sin_acentos)):
+                input_type = "reader"
             
             datos = {
                 'nombre_pantalla': nombre_original, 
                 'longitud': min_max_final, 
                 'tipo': TRADUCCION_TIPOS.get(limpiar_texto(tipo_bruto), "text"),
                 'es_catalogo': es_catalogo,
-                'id_catalogo': id_catalogo
+                'id_catalogo': id_catalogo,
+                'es_bucle': es_bucle,
+                'input_type': input_type
             }
             
             todas_las_vars_dict[nombre_logico] = datos
@@ -221,7 +249,11 @@ def procesar_solicitud(solicitud):
                 id_cat = v.get('id_catalogo', '').strip()
                 if id_cat not in agrupacion_catalogos:
                     agrupacion_catalogos[id_cat] = []
-                agrupacion_catalogos[id_cat].append(((int(v['longitud'].split('-')[1]) + 4) // 5) * 5)
+                max_str = v['longitud'].split('-')[1]
+                if max_str:
+                    agrupacion_catalogos[id_cat].append((int(max_str) // 5) * 5 + 5)
+                else:
+                    agrupacion_catalogos[id_cat].append(25)
                 
         nombres_unicos_catalogos = list(agrupacion_catalogos.keys())[:2]
         multiplos_por_lookup = {}

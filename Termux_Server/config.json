@@ -1,0 +1,16 @@
+{
+  "empresa": {
+    "nombre": "PROFESIONALES EN INVENTARIOS, S.A. DE C.V.",
+    "rfc": "PIN-050222-7N6",
+    "telefonos": "55-74-39-07 / 52-54-33-76",
+    "domicilio": "Blvd. Miguel de Cervantes Saavedra #161, Int 401, Col. Granada, Alc. Miguel Hidalgo, CDMX, C.P. 11520"
+  },
+  "banco": {
+    "institucion": "BBVA BANCOMER, S.A.",
+    "beneficiario": "PROFESIONALES EN INVENTARIOS, S.A. DE C.V.",
+    "cuenta": "0147274491",
+    "clabe": "0121 8000 1472 7449 11",
+    "sucursal": "93 Mariano Escobedo",
+    "plaza": "México, D.F."
+  }
+}

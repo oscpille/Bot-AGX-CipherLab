@@ -13,8 +13,8 @@ def quitar_acentos(texto):
     """Filtro para PyAutoGUI y Portapapeles: Quita acentos respetando mayúsculas."""
     return unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
 
-COMODINES_NUM = ["cn1#", "cn2#", "nl#"]
-COMODINES_TXT = ["ct1#", "ct2#", "al#", "pa#"]
+COMODINES_NUM = ["nl#", "cn2#"]
+COMODINES_TXT = ["al#"]
 indice_comodines_num = 0
 indice_comodines_txt = 0
 
@@ -114,7 +114,7 @@ def configurar_boton_more(row_idx, data_type, prefix_text="", input_mark_char=""
     pyautogui.press('enter') 
     time.sleep(0.04)
 
-def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None, input_mark_char=""):
+def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_fields=0, prefijo_forzado=None, input_mark_char="", input_type="both"):
     """Escribe velozmente un renglón, usa portapapeles y configura el botón More. Ignora filas vacías (nil)."""
     if data_type.lower() == "nil":
         return
@@ -149,7 +149,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
             pyautogui.write(texto_prompt, interval=0.01)
             time.sleep(0.05)
         
-    if data_type.lower() != "lookup":
+    if data_type.lower() not in ["lookup", "prompt", "pause"]:
         if min_len:
             pyautogui.click(columnas["min_length"], y_actual); time.sleep(0.03)
             pyautogui.write(min_len, interval=0.02)
@@ -157,6 +157,17 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
             pyautogui.click(columnas["max_length"], y_actual); time.sleep(0.03)
             pyautogui.write(max_len, interval=0.02)
         
+    if input_type != "both" and data_type.lower() not in ["nil", "prompt", "pause", "lookup"]:
+        pyautogui.click(columnas["input_type"], y_actual); time.sleep(0.03)
+        if input_type == "keypad":
+            pyautogui.press('k')
+        elif input_type == "reader":
+            pyautogui.press('r')
+        else:
+            pyautogui.press('b')
+        time.sleep(0.03)
+        pyautogui.press('enter'); time.sleep(0.03)
+
     if num_fields > 0:
         pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.03)
         pyautogui.click(columnas["variables_field"], y_actual); time.sleep(0.04)
@@ -218,9 +229,9 @@ def crear_pantalla_login_secundaria(form_coords, tipo_conteo, next_form_id):
     escribir_celda(0, "prompt", ">> L O G I N <<")
     escribir_celda(1, "nil", "")
     escribir_celda(2, "integer", "Contrasena: ", "5", "5", 1, prefijo_forzado="pw#", input_mark_char="*")
-    escribir_celda(3, "lookup", "Operador: ", "0", "80", 2, prefijo_forzado="us#") 
-    escribir_celda(4, "nil", "")
-    escribir_celda(5, "prompt", "TIPO DE CONTEO:")
+    escribir_celda(3, "prompt", "Operador: ") 
+    escribir_celda(4, "lookup", "", "0", "80", 2, prefijo_forzado="us#") 
+    escribir_celda(5, "pause", "TIPO DE CONTEO:")
     escribir_celda(6, "fixed_data", tipo_conteo, prefijo_forzado="rk#")
     escribir_celda(7, "fixed_data", "1", prefijo_forzado="nc#")
 
@@ -418,18 +429,30 @@ def ejecutar_bot(datos):
             print("\n➤ Entorno 8000: Desplegando solo Menu...")
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
 
-        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]);        # Usar wrap para dividir el string en líneas de 16 caracteres máximo
-        lineas_cliente = textwrap.wrap(cliente.upper(), width=16, break_long_words=True)
-        coords_items = [MAPA_UI["vista_menu"]["items"]["item_5"]["coords"], MAPA_UI["vista_menu"]["items"]["item_6"]["coords"], MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]]
-        dicc_nexts = [MAPA_UI["vista_menu"]["next_dropdowns"]["next_5"], MAPA_UI["vista_menu"]["next_dropdowns"]["next_6"], MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]]
+        pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.1)
         
-        for i in range(min(len(lineas_cliente), 3)):
+        # Usar wrap para dividir el string en líneas de 16 caracteres máximo (Max 2 líneas para reservar Item 7)
+        lineas_cliente = textwrap.wrap(cliente.upper(), width=16, break_long_words=True)
+        coords_items = [MAPA_UI["vista_menu"]["items"]["item_5"]["coords"], MAPA_UI["vista_menu"]["items"]["item_6"]["coords"]]
+        dicc_nexts = [MAPA_UI["vista_menu"]["next_dropdowns"]["next_5"], MAPA_UI["vista_menu"]["next_dropdowns"]["next_6"]]
+        
+        for i in range(min(len(lineas_cliente), 2)):
             pyautogui.click(coords_items[i]); time.sleep(0.03)
             pyautogui.write(lineas_cliente[i], interval=0.03)
             pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.14)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('enter'); time.sleep(0.03)
+            
+        # Reservamos el Item 7 para el indicador visual de Abierto/Cerrado
+        modo_texto = ">> CERRADO <<" if modo_ejecucion == "cerrado" else ">> ABIERTO <<"
+        pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
+        pyperclip.copy(modo_texto)
+        pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
+        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]["coords"]); time.sleep(0.14)
+        pyautogui.press('m'); time.sleep(0.03)
+        pyautogui.press('m'); time.sleep(0.03)
+        pyautogui.press('enter'); time.sleep(0.03)
 
         print("➤ Configurando Menu 2 (Tipos de Conteo)...")
         pyautogui.click(MAPA_UI["vista_menu"]["menu_2"])
@@ -538,12 +561,21 @@ def ejecutar_bot(datos):
                 
                 p_esc = esc_retorno_datos if idx == 0 else p_route['datos'][idx - 1]['f_num']
                 if es_ultima:
-                    first_data_f_num = p_route['datos'][0]['f_num']
+                    bucle_f_num = None
                     for pg in p_route['datos']:
-                        if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
-                            first_data_f_num = pg['f_num']
+                        if any(v.get('es_bucle') for v in pg['vars']):
+                            bucle_f_num = pg['f_num']
                             break
-                    p_next = first_data_f_num
+                    
+                    if bucle_f_num is not None:
+                        p_next = bucle_f_num
+                    else:
+                        first_data_f_num = p_route['datos'][0]['f_num']
+                        for pg in p_route['datos']:
+                            if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
+                                first_data_f_num = pg['f_num']
+                                break
+                        p_next = first_data_f_num
                 else:
                     p_next = p_route['datos'][idx + 1]['f_num'] 
                 p_record = "save" if es_ultima else "pass_down"
@@ -579,7 +611,8 @@ def ejecutar_bot(datos):
                         idx_catalogo_p += 1
                     else:
                         num_field = 0
-                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla'].upper()}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
+                    p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
+                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'))
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     escribir_celda(6, "pause", "[ENTER] O [ESC]")
@@ -608,12 +641,21 @@ def ejecutar_bot(datos):
                 
                 v_esc = esc_retorno_datos_v if idx == 0 else v_route['datos'][idx - 1]['f_num']
                 if es_ultima:
-                    first_data_f_num = v_route['datos'][0]['f_num']
+                    bucle_f_num = None
                     for pg in v_route['datos']:
-                        if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
-                            first_data_f_num = pg['f_num']
+                        if any(v.get('es_bucle') for v in pg['vars']):
+                            bucle_f_num = pg['f_num']
                             break
-                    v_next = first_data_f_num
+                    
+                    if bucle_f_num is not None:
+                        v_next = bucle_f_num
+                    else:
+                        first_data_f_num = v_route['datos'][0]['f_num']
+                        for pg in v_route['datos']:
+                            if not any(x.lower() in v['nombre_pantalla'].lower() for v in pg['vars'] for x in ['ubicacion', 'ubicación', 'marbete']):
+                                first_data_f_num = pg['f_num']
+                                break
+                        v_next = first_data_f_num
                 else:
                     v_next = v_route['datos'][idx + 1]['f_num']
                 v_record = "save" if es_ultima else "pass_down"
@@ -649,7 +691,8 @@ def ejecutar_bot(datos):
                         idx_catalogo_v += 1
                     else:
                         num_field = 0
-                    escribir_celda(r_idx + 1, v_info['tipo'], f"{v_info['nombre_pantalla'].upper()}: ", v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_")
+                    p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
+                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'))
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     c_min, c_max = info_cantidad['longitud'].split('-')
@@ -667,11 +710,25 @@ def ejecutar_bot(datos):
             path_abierto = guardar_trabajo_final(modelo_exacto, cliente, "Abierto")
             archivos_generados.append(path_abierto)
             
-            print("\n➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
-            pyautogui.click(MAPA_UI["vista_lookup"]["archivos"]["2nd_lookup"]); time.sleep(0.26)
+            print("\n➤ [Modo Ambos] Actualizando Menu 1 a CERRADO...")
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
+            pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.26)
             
-            print("➤ Configurando 2nd Lookup: Cerrado (Show warning)")
-            pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
+            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
+            # Doble clic para seleccionar y borrar el texto actual
+            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
+            pyautogui.press('delete'); pyautogui.press('backspace', presses=16)
+            pyperclip.copy(">> CERRADO <<")
+            pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
+            
+            print("➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
+            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.26)
+            
+            for lookup_name in ['2nd_lookup', '3rd_lookup']:
+                if multiplos_por_lookup.get(lookup_name, []):
+                    pyautogui.click(MAPA_UI["vista_lookup"]["archivos"][lookup_name]); time.sleep(0.26)
+                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning)")
+                    pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.2)
             
             path_cerrado = guardar_trabajo_final(modelo_exacto, cliente, "Cerrado")
             archivos_generados.append(path_cerrado)

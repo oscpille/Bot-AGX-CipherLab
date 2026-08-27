@@ -3,65 +3,72 @@
 # =========================================================
 
 # RUTA_EXCEL = r"C:\Users\dell\OneDrive - Profesionales en Inventarios SA de CV\SOLICITUD DE AGX.xlsx"
-import firebase_admin
-from firebase_admin import credentials, firestore
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
 
-# Configuración Firebase (la llave debe estar en la raíz)
+load_dotenv()
+
+# Configuración Supabase
 try:
-    cred = credentials.Certificate('firebase_key.json')
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("✅ PC conectada a Firebase exitosamente.")
+    url: str = os.environ.get("SUPABASE_URL")
+    key: str = os.environ.get("SUPABASE_KEY")
+    if url and key:
+        db: Client = create_client(url, key)
+        print("✅ PC conectada a Supabase exitosamente.")
+    else:
+        db = None
+        print("⚠️ Advertencia: No se encontraron las credenciales SUPABASE_URL o SUPABASE_KEY en el archivo .env")
 except Exception as e:
     db = None
-    print(f"⚠️ Error conectando a Firebase: {e}")
+    print(f"⚠️ Error conectando a Supabase: {e}")
 DICCIONARIO_PREFIJOS = {
-    # fca
-    "fecha de caducidad": "fca", "fecha caducidad": "fca", "fecha de vencimiento": "fca",
-    "caduccion": "fca", "vencimiento": "fca", "caducidad": "fca", "expiracion": "fca", "cad": "fca",
+    # fc
+    "fecha de caducidad": "fc", "fecha caducidad": "fc", "fecha de vencimiento": "fc",
+    "caduccion": "fc", "vencimiento": "fc", "caducidad": "fc", "expiracion": "fc", "cad": "fc",
     # nse
     "numero de serie": "nse", "numero serial": "nse", "serial number": "nse", 
     "series": "nse", "serie": "nse", "serial": "nse", "sn": "nse",
     # ped
     "registro aduanero": "ped", "mercancia importada": "ped", "importacion": "ped",
     "aduana": "ped", "pedimento": "ped",
-    # lpn
-    "numero de matricula": "lpn", "matricula": "lpn", "lpn": "lpn",
+    # ic
+    "numero de matricula": "ic", "matricula": "ic", "lpn": "ic",
     # cba
     "codigo de barras": "cba", "codigo de barra": "cba", "barras": "cba", "ean": "cba", "upc": "cba",
-    # cin
-    "codigo interno": "cin", "codigo cliente": "cin", "clave": "cin", "interno": "cin",
-    # des
-    "descripcion de articulo": "des", "descripcion": "des", "descrip": "des",
+    # ps
+    "codigo interno": "ps", "codigo cliente": "ps", "clave": "ps", "interno": "ps",
+    # ds
+    "descripcion de articulo": "ds", "descripcion": "ds", "descrip": "ds",
     # ter
     "id terminal": "ter", "ns del scaner": "ter", "scanner": "ter", "escaner": "ter", "terminal": "ter",
-    # mca, mod, lot, mar, tal, caj, are, col
+    # mca, mod, lt, mb, tal, caj, ar, col
     "marcas": "mca", "marca": "mca",
     "modelos": "mod", "modelo": "mod",
-    "lotes": "lot", "lote": "lot", "batch": "lot",
-    "marbetes": "mar", "marbete": "mar",
+    "lotes": "lt", "lote": "lt", "batch": "lt",
+    "marbetes": "mb", "marbete": "mb",
     "tallas": "tal", "talla": "tal",
     "cajas": "caj", "caja": "caj",
-    "areas": "are", "area": "are",
+    "areas": "ar", "area": "ar",
     "colores": "col", "color": "col",
-    # ubi, sku, est
+    # ubi, sk, est
     "ubicacion": "ubi",
-    "sku": "sku", "sk": "sku", "sap": "sku", "articulo": "sku", "item": "sku", "producto": "sku", "codigo de producto": "sku", "cve": "sku",
+    "sku": "sk", "sk": "sk", "sap": "sk", "articulo": "sk", "item": "sk", "producto": "sk", "codigo de producto": "sk", "cve": "sk",
     "estado": "est", "condicion": "est", "estatus": "est",
     # dep
     "departamento": "dep", "depto": "dep", "familia": "dep", "clase": "dep", "seccion": "dep",
     # uni
     "unidades de medida": "uni", "unidad de medida": "uni", "unidades": "uni", "unidad": "uni", "medida": "uni",
-    # con (Conteos y unidades específicas)
-    "centimetro": "con", "cm": "con", "milimetro": "con", "mm": "con",
-    "milla": "con", "mi": "con", "yarda": "con", "yd": "con", "pie": "con", "ft": "con", 
-    "pulgada": "con", "in": "con", "metro": "con", "metros": "con", "mts": "con",
-    "kilometro": "con", "km": "con", "decimetro": "con", "dm": "con", 
-    "tonelada": "con", "kilogramo": "con", "kilos": "con", "kg": "con", 
-    "gramo": "con", "gramos": "con", "gr": "con", "miligramo": "con", "miligramos": "con", "mg": "con", 
-    "libra": "con", "lb": "con", "onza": "con", "oz": "con", "grano": "con",
-    "litros": "con", "galones": "con", "kl": "con", "ml": "con",
-    "cantidad": "con", "conteo": "con"
+    # cn (Conteos y unidades específicas)
+    "centimetro": "cn", "cm": "cn", "milimetro": "cn", "mm": "cn",
+    "milla": "cn", "mi": "cn", "yarda": "cn", "yd": "cn", "pie": "cn", "ft": "cn", 
+    "pulgada": "cn", "in": "cn", "metro": "cn", "metros": "cn", "mts": "cn",
+    "kilometro": "cn", "km": "cn", "decimetro": "cn", "dm": "cn", 
+    "tonelada": "cn", "kilogramo": "cn", "kilos": "cn", "kg": "cn", 
+    "gramo": "cn", "gramos": "cn", "gr": "cn", "miligramo": "cn", "miligramos": "cn", "mg": "cn", 
+    "libra": "cn", "lb": "cn", "onza": "cn", "oz": "cn", "grano": "cn",
+    "litros": "cn", "galones": "cn", "kl": "cn", "ml": "cn",
+    "cantidad": "cn", "conteo": "cn"
 }
 
 DICCIONARIO_NOMBRES_CORTOS = {
@@ -96,7 +103,7 @@ DICCIONARIO_NOMBRES_CORTOS = {
 TRADUCCION_TIPOS = {
     "num": "integer", "numerico": "integer", "entero": "integer", "decimal": "real",
     "alfanum": "alphameric", "alfanumerico": "alphameric", "texto": "text", "letras": "letter",
-    "lookup": "lookup"
+    "lookup": "lookup", "prompt": "prompt"
 }
 
 # Este mapa se llenará dinámicamente según el modelo requerido (8000 u 8200)

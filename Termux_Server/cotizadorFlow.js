@@ -253,7 +253,7 @@ async function handleMessage(msg, catalog) {
             if (text.length < 2) return "Por favor, ingresa al menos 2 caracteres para buscar.";
             
             // Retornamos un mensaje de espera que será reemplazado cuando la búsqueda termine
-            const { searchQuotesByCompany } = require('./firebase');
+            const { searchQuotesByCompany } = require('./supabase');
             try {
                 const results = await searchQuotesByCompany(text);
                 if (results.length === 0) {
@@ -442,7 +442,7 @@ async function handleMessage(msg, catalog) {
             } else if (lowerText === '2' || lowerText === '2.' || lowerText === 'no') {
                 session.state = STATES.WAITING_FOR_DESCRIPTION;
                 
-                const { checkFolioExists } = require('./firebase');
+                const { checkFolioExists } = require('./supabase');
                 let newFolio;
                 let exists = true;
                 while(exists) {
@@ -468,7 +468,7 @@ async function handleMessage(msg, catalog) {
             if (lowerText === '1' || lowerText === '1.' || lowerText === 'si' || lowerText === 'sí') {
                 session.state = STATES.WAITING_FOR_DESCRIPTION;
                 
-                const { checkFolioExists } = require('./firebase');
+                const { checkFolioExists } = require('./supabase');
                 let newFolio;
                 let exists = true;
                 while(exists) {

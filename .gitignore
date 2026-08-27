@@ -13,3 +13,5 @@ AGX Bot/Modelo 8000/*.AGX
 AGX Bot/Modelo 8000/*.agx
 AGX Bot/Modelo 8200/*.AGX
 AGX Bot/Modelo 8200/*.agx
+.env
+*.rar
