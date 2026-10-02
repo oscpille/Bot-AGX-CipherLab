@@ -24,6 +24,7 @@ MAPA_UI = {
         "items": {
             "item_1": {"coords": (900, 180), "accion": "1_click_copiar_borrar"},
             "item_2": {"coords": (900, 195), "accion": "1_click_copiar_borrar"},
+            "item_4": {"coords": (900, 245), "accion": "1_click_copiar_borrar"},
             "item_5": {"coords": (900, 260), "accion": "1_click_copiar_borrar"},
             "item_6": {"coords": (900, 275), "accion": "1_click_copiar_borrar"},
             "item_7": {"coords": (800, 300), "accion": "1_click_copiar_borrar"}
@@ -31,6 +32,7 @@ MAPA_UI = {
         "next_dropdowns": {
             "next_1": {"coords": (1100, 180)},
             "next_2": {"coords": (1100, 195)},
+            "next_4": {"coords": (1100, 245)},
             "next_5": {"coords": (1100, 260)},
             "next_6": {"coords": (1100, 275)},
             "next_7": {"coords": (1100, 300)}
@@ -51,7 +53,8 @@ MAPA_UI = {
         "action_no_match": {
             "continue": (445, 504),
             "show_warning": (445, 530),
-            "show_warning_insert": (445, 587)
+            "show_warning_insert": (445, 587),
+            "show_warning_clear": (445, 640)
         }
     },
     

@@ -148,12 +148,10 @@ def procesar_solicitud(solicitud):
                 continue
             
             linea_limpia = linea.lower().replace(',', '').replace('.', '').replace(';', '')
-            match_nombre = re.match(r'^([^0-9:]+)', linea)
-            if not match_nombre: continue
-            
-            nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en|a|al|hasta)$', '', match_nombre.group(1).strip()).strip()
+            nombre_original = re.sub(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', '', linea).strip()
+            nombre_original = re.sub(r'(?i)\s+(con|de|mínimo|minimo|en|a|al|hasta)$', '', nombre_original).strip()
+            nombre_original = re.sub(r'(?i)(?:\s+(?:catalogo|catálogo|lookup|prompt|mensaje|bucle|loop|teclado|keypad|lector|reader|\d+))+$', '', nombre_original).strip()
             nombre_original = re.sub(r'[;,.\-:]+$', '', nombre_original).strip()
-            nombre_original = re.sub(r'(?i)(?:\s+(?:catalogo|lookup|prompt|mensaje|bucle|loop|teclado|keypad|lector|reader))+$', '', nombre_original).strip()
             
             nombre_original_lower = limpiar_texto(nombre_original)
             for largo, corto in DICCIONARIO_NOMBRES_CORTOS.items():
@@ -184,10 +182,15 @@ def procesar_solicitud(solicitud):
                     tiene_longitud = True
                 
             linea_limpia_sin_acentos = limpiar_texto(linea)
-            match_cat = re.search(r'\b(catalogo)\b(.*)', linea_limpia_sin_acentos)
+            
+            linea_sin_long = re.sub(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', '', linea_limpia_sin_acentos)
+            # Removemos la línea que borraba todos los números aislados porque destruía los IDs de catálogo (ej. 'catalogo 2')
+            match_cat = re.search(r'\b(catalogo|lookup)\b\s*(\S*)', linea_sin_long)
+            
             if match_cat:
                 es_catalogo = True
                 id_catalogo = match_cat.group(2).strip()
+                id_catalogo = re.sub(r'\b(bucle|loop|teclado|keypad|lector|reader|prompt|mensaje)\b', '', id_catalogo).strip()
             else:
                 es_catalogo = False
                 id_catalogo = ""
@@ -243,10 +246,16 @@ def procesar_solicitud(solicitud):
         listado_vars = todas_las_vars
         
         agrupacion_catalogos = {}
+        ultimo_id_cat = ""
         for v in todas_las_vars:
             if v.get('is_page_break'): continue
             if v.get('es_catalogo'):
                 id_cat = v.get('id_catalogo', '').strip()
+                if not id_cat and ultimo_id_cat:
+                    id_cat = ultimo_id_cat
+                    v['id_catalogo'] = id_cat
+                ultimo_id_cat = id_cat
+                
                 if id_cat not in agrupacion_catalogos:
                     agrupacion_catalogos[id_cat] = []
                 max_str = v['longitud'].split('-')[1]
@@ -310,6 +319,9 @@ def procesar_solicitud(solicitud):
         print(f"➤ Inventario para: {cliente}")
         print(f"➤ Tipo de Conteo : {txt_conteo}")
         
+        print("➤ Formato original recibido (Raw Text):")
+        for linea_cruda in str(solicitud.get('POR ÚLTIMO, INGRESA QUÉ DATOS SON LOS QUE DESEAS EN TU AGX Y CUÁL ES SU LÍMITE DE CARACTERES:', '')).split('\n'):
+            print(f"   {linea_cruda}")
         print("➤ Datos interpretados por el bot:")
         
         todas_las_variables = list(listado_vars)
@@ -317,13 +329,16 @@ def procesar_solicitud(solicitud):
             todas_las_variables.append(info_cantidad)
             
         for var in todas_las_variables:
-            if var is not None and not var.get('is_page_break'):
-                if var.get('lookup_file') and var.get('lookup_file') != 'no_lookup':
-                    l_file_str = "2nd Lookup File" if var['lookup_file'] == '2nd_lookup' else "3rd Lookup File"
-                    indicativo_lookup = f" <- {l_file_str}"
+            if var is not None:
+                if var.get('is_page_break'):
+                    print("   [--- SALTO DE PANTALLA ---]")
                 else:
-                    indicativo_lookup = ""
-                print(f"   • {var['nombre_pantalla']}: {var['longitud']}{indicativo_lookup}")
+                    if var.get('lookup_file') and var.get('lookup_file') != 'no_lookup':
+                        l_file_str = "2nd Lookup File" if var['lookup_file'] == '2nd_lookup' else "3rd Lookup File"
+                        indicativo_lookup = f" <- {l_file_str}"
+                    else:
+                        indicativo_lookup = ""
+                    print(f"   • {var['nombre_pantalla']}: {var['longitud']}{indicativo_lookup}")
         
         print("="*55)
 

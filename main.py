@@ -5,6 +5,7 @@ import base64
 import requests
 import threading
 import tkinter as tk
+import json
 import logging
 import warnings
 # Suprimir warnings
@@ -103,6 +104,54 @@ def actualizar_latido():
         time.sleep(60)
 
 def main():
+    # Prevenir que Windows entre en modo suspensión (bajo consumo) mientras el bot esté abierto
+    import ctypes
+    ES_CONTINUOUS = 0x80000000
+    ES_SYSTEM_REQUIRED = 0x00000001
+    ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+
+    # ---------------------------------------------------------
+    # LÓGICA DE SYSTEM TRAY (ICONOS OCULTOS)
+    # ---------------------------------------------------------
+    import pystray
+    from PIL import Image, ImageDraw
+    import sys
+    
+    kernel32 = ctypes.WinDLL('kernel32')
+    user32 = ctypes.WinDLL('user32')
+    hWnd = kernel32.GetConsoleWindow()
+    
+    # Ocultar la consola automáticamente al abrir y deshabilitar su botón "X"
+    if hWnd:
+        user32.ShowWindow(hWnd, 0) # SW_HIDE
+        hMenu = user32.GetSystemMenu(hWnd, False)
+        if hMenu:
+            user32.EnableMenuItem(hMenu, 0xF060, 1) # SC_CLOSE (0xF060) | MF_GRAYED (1)
+
+    def on_show(icon, item):
+        if hWnd: user32.ShowWindow(hWnd, 5) # SW_SHOW
+
+    def on_hide(icon, item):
+        if hWnd: user32.ShowWindow(hWnd, 0) # SW_HIDE
+        
+    def on_quit(icon, item):
+        icon.stop()
+        os._exit(0)
+
+    def create_image():
+        image = Image.new('RGB', (64, 64), color=(0, 0, 0))
+        dc = ImageDraw.Draw(image)
+        dc.rectangle((16, 16, 48, 48), fill=(40, 167, 69))
+        return image
+        
+    tray_icon = pystray.Icon("AGX Vigía", create_image(), "AGX Bot (Vigía)", menu=pystray.Menu(
+        pystray.MenuItem("Mostrar Consola", on_show),
+        pystray.MenuItem("Ocultar Consola", on_hide),
+        pystray.MenuItem("Cerrar Bot", on_quit)
+    ))
+    tray_icon.run_detached()
+    # ---------------------------------------------------------
+
     # Instanciar Tkinter de forma persistente y ocultarlo
     root_tk = tk.Tk()
     root_tk.withdraw()
@@ -111,8 +160,9 @@ def main():
     print("=====================================================")
     print("      ORQUESTADOR DE BOT AGX INICIADO (MODO VIGÍA)   ")
     print("=====================================================")
-    print("➤ El bot está monitoreando en segundo plano...")
-    print("➤ Puedes minimizar esta ventana negra y seguir trabajando.")
+    print("➤ El bot está monitoreando en segundo plano 24/7...")
+    print("➤ Prevención de Suspensión de Windows ACTIVADA (El equipo no se dormirá).")
+    print("➤ La consola está anclada a la barra de tareas (Iconos Ocultos).")
     
     while True:
         if not db:
@@ -127,9 +177,9 @@ def main():
             if len(debug_resp.data) > 0:
                 print(f"🔎 DEBUG PRIMERA FILA (Status): '{debug_resp.data[0].get('Status_AGX')}'")
 
-            response = db.table('AGX').select('*').eq('Status_AGX', 'Recibido').execute()
+            response = db.table('AGX').select('*').eq('Status_AGX', 'Solicitado').execute()
             todas_las_docs = response.data
-            print(f"🔎 DEBUG FILAS 'Recibido': {len(todas_las_docs)}")
+            print(f"🔎 DEBUG FILAS 'Solicitado': {len(todas_las_docs)}")
             
             solicitudes_pendientes = []
             def mapear_doc(d):
@@ -162,7 +212,7 @@ def main():
                     doc.get('Modelo_AGX', ''), 
                     doc.get('Nombre_AGX', ''), 
                     doc.get('Flujo_AGX', ''), 
-                    str(doc.get('Datos_AGX', {})), 
+                    json.dumps(doc.get('Datos_AGX', {}), sort_keys=True), 
                     doc.get('Chat_id', '')
                 )
                 if key not in grupos:
@@ -214,7 +264,24 @@ def main():
         # ====================================================
         # INICIA LA RÁFAGA
         # ====================================================
-        print("\n▶️ Arrancando motores de automatización...")
+        print("\n▶️ Despertando equipo y arrancando motores de automatización...")
+        import pyautogui
+        import ctypes
+        
+        # 1. Desactivar el Fail-Safe de PyAutoGUI para evitar bloqueos si el sistema lee (0,0)
+        pyautogui.FAILSAFE = False
+        
+        # 2. Matar el proceso del protector de pantalla (scrnsave.scr) si está ejecutándose
+        import os
+        os.system("taskkill /IM scrnsave.scr /F >nul 2>&1")
+        
+        # 3. Forzar el encendido del monitor (por si estaba en ahorro de energía)
+        HWND_BROADCAST = 0xFFFF
+        WM_SYSCOMMAND = 0x0112
+        SC_MONITORPOWER = 0xF170
+        ctypes.windll.user32.SendMessageW(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, -1)
+        
+        time.sleep(2.0) # Dar 2 segundos para que la pantalla encienda y reaccione
         
         for indice, solicitud in enumerate(solicitudes_pendientes, start=1):
             print(f"\n{'-'*50}")
@@ -242,12 +309,12 @@ def main():
                     
                     try:
                         with open(ruta, "rb") as f:
-                            db.storage.from_("agx-archivos").upload(
+                            db.storage.from_("agx_archivos").upload(
                                 path=storage_path,
                                 file=f,
                                 file_options={"content-type": "application/x-zip-compressed"}
                             )
-                        url_publica = db.storage.from_("agx-archivos").get_public_url(storage_path)
+                        url_publica = db.storage.from_("agx_archivos").get_public_url(storage_path)
                         archivos_para_subir.append({
                             "file_name": file_name,  # Mantenemos el nombre original para WhatsApp
                             "url": url_publica

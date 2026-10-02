@@ -1,4 +1,5 @@
 import pyautogui
+pyautogui.FAILSAFE = False
 import time
 import re
 import textwrap
@@ -14,33 +15,43 @@ def quitar_acentos(texto):
     return unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
 
 COMODINES_NUM = ["nl#", "cn2#"]
-COMODINES_TXT = ["al#"]
+COMODINES_TXT = ["al#", "pa#"]
 indice_comodines_num = 0
 indice_comodines_txt = 0
+memoria_comodines = {}
 
 def resetear_comodines():
     """Reinicia los contadores de comodines al inicio de cada ejecución del bot."""
-    global indice_comodines_num, indice_comodines_txt
+    global indice_comodines_num, indice_comodines_txt, memoria_comodines
     indice_comodines_num = 0
+    indice_comodines_txt = 0
+    memoria_comodines = {}
     indice_comodines_txt = 0
 
 def calcular_prefijo(nombre_pantalla, data_type="texto"):
     """Analiza el texto de la pantalla, busca el prefijo ideal o usa comodines por tipo de dato."""
-    global indice_comodines_num, indice_comodines_txt
+    if data_type.lower() in ["prompt", "pause", "nil", "fixed_data"]:
+        return ""
+    global indice_comodines_num, indice_comodines_txt, memoria_comodines
     nombre_limpio = limpiar_texto(nombre_pantalla)
     
     for clave, prefijo in DICCIONARIO_PREFIJOS.items():
         if re.search(rf'\b{clave}\b', nombre_limpio):
             return prefijo + "#"
             
+    if nombre_limpio in memoria_comodines:
+        return memoria_comodines[nombre_limpio]
+        
     # Unificación de Comodines: Agotar TXT primero, luego NUM.
     if indice_comodines_txt < len(COMODINES_TXT):
         pref = COMODINES_TXT[indice_comodines_txt]
         indice_comodines_txt += 1
+        memoria_comodines[nombre_limpio] = pref
         return pref
     elif indice_comodines_num < len(COMODINES_NUM):
         pref = COMODINES_NUM[indice_comodines_num]
         indice_comodines_num += 1
+        memoria_comodines[nombre_limpio] = pref
         return pref
         
     return ""
@@ -187,6 +198,7 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
         pyautogui.press('enter'); time.sleep(0.03) 
 
     prefijo_calculado = prefijo_forzado if prefijo_forzado is not None else (calcular_prefijo(prompt_text, data_type) if prompt_text else "")
+    print(f"   [Debug Prefix] Prompt: '{prompt_text}' -> Prefix: '{prefijo_calculado}'")
     configurar_boton_more(row_idx, data_type, prefijo_calculado, input_mark_char)
 
 def configurar_1st_lookup(form_coords, tipo_conteo, next_form_id):
@@ -391,13 +403,22 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx, telefono=""):
 
 # Se eliminó enviar_por_whatsapp
 
+import ctypes
+
+def disable_caps_lock():
+    VK_CAPITAL = 0x14
+    if ctypes.WinDLL("User32.dll").GetKeyState(VK_CAPITAL) & 1:
+        pyautogui.press('capslock')
+
 def ejecutar_bot(datos):
     """Ejecuta el bot RPA utilizando los datos interpretados de Excel."""
+    disable_caps_lock()
+    
     es_pieza = datos['es_pieza']
     es_volumen = datos['es_volumen']
     cliente = datos['cliente']
     tipo_agx = datos['tipo_agx']
-    telefono = datos.get('chat_id', '').split('@')[0]
+    telefono = (datos.get('chat_id') or '').split('@')[0]
     plan_vuelo = datos['plan_vuelo']
     info_cantidad = datos['info_cantidad']
     multiplos_por_lookup = datos.get('multiplos_por_lookup', {})
@@ -440,19 +461,17 @@ def ejecutar_bot(datos):
             pyautogui.click(coords_items[i]); time.sleep(0.03)
             pyautogui.write(lineas_cliente[i], interval=0.03)
             pyautogui.click(dicc_nexts[i]["coords"]); time.sleep(0.14)
+            pyautogui.press('home'); time.sleep(0.03)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('m'); time.sleep(0.03)
             pyautogui.press('enter'); time.sleep(0.03)
+            pyautogui.press('esc'); time.sleep(0.1)
             
-        # Reservamos el Item 7 para el indicador visual de Abierto/Cerrado
-        modo_texto = ">> CERRADO <<" if modo_ejecucion == "cerrado" else ">> ABIERTO <<"
-        pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
-        pyperclip.copy(modo_texto)
-        pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
-        pyautogui.click(MAPA_UI["vista_menu"]["next_dropdowns"]["next_7"]["coords"]); time.sleep(0.14)
-        pyautogui.press('m'); time.sleep(0.03)
-        pyautogui.press('m'); time.sleep(0.03)
-        pyautogui.press('enter'); time.sleep(0.03)
+        # Usamos el Item 4 para el indicador visual de Abierto/Cerrado (Solo se escribe si es cerrado, ya que la plantilla trae ABIERTO por defecto)
+        if modo_ejecucion == "cerrado":
+            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_4"]["coords"]); time.sleep(0.03)
+            pyautogui.press('backspace')
+            pyautogui.write("<< CERRADO >>", interval=0.02); time.sleep(0.05)
 
         print("➤ Configurando Menu 2 (Tipos de Conteo)...")
         pyautogui.click(MAPA_UI["vista_menu"]["menu_2"])
@@ -466,11 +485,15 @@ def ejecutar_bot(datos):
         def seleccionar_form_dropdown(coordenada_next, num_form):
             pyautogui.click(coordenada_next)
             time.sleep(0.04)
+            pyautogui.press('home')
+            time.sleep(0.03)
             for _ in range(num_form):
                 pyautogui.press('f')
                 time.sleep(0.03)
             pyautogui.press('enter')
             time.sleep(0.04)
+            pyautogui.press('esc')
+            time.sleep(0.1)
 
         if es_pieza and es_volumen:
             pyautogui.click(coords_item1); time.sleep(0.03)
@@ -531,12 +554,16 @@ def ejecutar_bot(datos):
                 else:
                     modo_ejecucion = "cerrado"
 
-                if modo_ejecucion in ["abierto", "ambos"]:
-                    print(f"➤ Configurando {lookup_name}: Abierto (Show warning & insert) {'[Modo Dual Activo]' if modo_ejecucion == 'ambos' else ''}")
-                    pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
-                else:
-                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning)")
+                if lookup_name == '3rd_lookup':
+                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning message) [Forzado por Sistema]")
                     pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
+                else:
+                    if modo_ejecucion in ["abierto", "ambos"]:
+                        print(f"➤ Configurando {lookup_name}: Abierto (Show warning & insert) {'[Modo Dual Activo]' if modo_ejecucion == 'ambos' else ''}")
+                        pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning_insert"]); time.sleep(0.04)
+                    else:
+                        print(f"➤ Configurando {lookup_name}: Cerrado (Show warning message)")
+                        pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.04)
 
         if not es_8200:
             pyautogui.click(MAPA_UI["directorio_izquierdo"]["form"]); time.sleep(0.26)
@@ -550,7 +577,7 @@ def ejecutar_bot(datos):
                 crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{p_route['login']}"], "PZ X PZ", p_route['datos'][0]['f_num'])
             esc_retorno_datos = p_route['login']
             total_pags_p = len(p_route['datos'])
-            idx_catalogo_p = 1
+            campos_por_lookup_p = {}
             for idx, pagina_data in enumerate(p_route['datos']):
                 f_num = pagina_data['f_num']
                 l_file = pagina_data['lookup_file']
@@ -607,8 +634,10 @@ def ejecutar_bot(datos):
                 
                 for r_idx, v_info in enumerate(rebanada):
                     if v_info.get('es_catalogo'):
-                        num_field = idx_catalogo_p
-                        idx_catalogo_p += 1
+                        if l_file not in campos_por_lookup_p:
+                            campos_por_lookup_p[l_file] = 1
+                        num_field = campos_por_lookup_p[l_file]
+                        campos_por_lookup_p[l_file] += 1
                     else:
                         num_field = 0
                     p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
@@ -630,7 +659,7 @@ def ejecutar_bot(datos):
                 crear_pantalla_login_secundaria(MAPA_UI["vista_form"]["seleccion_forms"][f"form_{v_route['login']}"], "VOL", v_route['datos'][0]['f_num'])
             esc_retorno_datos_v = v_route['login']
             total_pags_v = len(v_route['datos'])
-            idx_catalogo_v = 1
+            campos_por_lookup_v = {}
             for idx, pagina_data in enumerate(v_route['datos']):
                 f_num = pagina_data['f_num']
                 l_file = pagina_data['lookup_file']
@@ -687,8 +716,10 @@ def ejecutar_bot(datos):
                 
                 for r_idx, v_info in enumerate(rebanada):
                     if v_info.get('es_catalogo'):
-                        num_field = idx_catalogo_v
-                        idx_catalogo_v += 1
+                        if l_file not in campos_por_lookup_v:
+                            campos_por_lookup_v[l_file] = 1
+                        num_field = campos_por_lookup_v[l_file]
+                        campos_por_lookup_v[l_file] += 1
                     else:
                         num_field = 0
                     p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
@@ -711,23 +742,26 @@ def ejecutar_bot(datos):
             archivos_generados.append(path_abierto)
             
             print("\n➤ [Modo Ambos] Actualizando Menu 1 a CERRADO...")
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
+            if not es_8200:
+                pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
             pyautogui.click(MAPA_UI["vista_menu"]["menu_1"]); time.sleep(0.26)
             
-            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
-            # Doble clic para seleccionar y borrar el texto actual
-            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_7"]["coords"]); time.sleep(0.03)
-            pyautogui.press('delete'); pyautogui.press('backspace', presses=16)
-            pyperclip.copy(">> CERRADO <<")
-            pyautogui.hotkey('ctrl', 'v'); time.sleep(0.05)
+            pyautogui.click(MAPA_UI["vista_menu"]["items"]["item_4"]["coords"]); time.sleep(0.03)
+            pyautogui.press('backspace')
+            pyautogui.write("<< CERRADO >>", interval=0.02); time.sleep(0.05)
+            
+            
+            if not es_8200:
+                pyautogui.click(MAPA_UI["directorio_izquierdo"]["menu"]); time.sleep(0.26)
             
             print("➤ [Modo Ambos] Regresando a configuración de Lookup para generar versión Cerrada...")
-            pyautogui.click(MAPA_UI["directorio_izquierdo"]["lookup"]); time.sleep(0.26)
+        # if not es_8200:
+        #     pass
             
             for lookup_name in ['2nd_lookup', '3rd_lookup']:
                 if multiplos_por_lookup.get(lookup_name, []):
                     pyautogui.click(MAPA_UI["vista_lookup"]["archivos"][lookup_name]); time.sleep(0.26)
-                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning)")
+                    print(f"➤ Configurando {lookup_name}: Cerrado (Show warning message)")
                     pyautogui.click(MAPA_UI["vista_lookup"]["action_no_match"]["show_warning"]); time.sleep(0.2)
             
             path_cerrado = guardar_trabajo_final(modelo_exacto, cliente, "Cerrado")

@@ -21,6 +21,7 @@ MAPA_UI = {
         "items": {
             "item_1": {"coords": (850, 230), "accion": "1_click_copiar_borrar"},
             "item_2": {"coords": (850, 255), "accion": "1_click_copiar_borrar"},
+            "item_4": {"coords": (850, 297), "accion": "1_click_copiar_borrar"},
             "item_5": {"coords": (850, 315), "accion": "1_click_copiar_borrar"},
             "item_6": {"coords": (850, 333), "accion": "1_click_copiar_borrar"},
             "item_7": {"coords": (850, 350), "accion": "1_click_copiar_borrar"}
@@ -28,6 +29,7 @@ MAPA_UI = {
         "next_dropdowns": {
             "next_1": {"coords": (1000, 230), "form_2": (1000, 275), "form_5": (1000, 317)},
             "next_2": {"coords": (1000, 255), "form_2": (1000, 296), "form_5": (1000, 335)},
+            "next_4": {"coords": (1000, 297), "menu_2": (1000, 471)},
             "next_5": {"coords": (1000, 315), "menu_2": (1000, 490)},
             "next_6": {"coords": (1000, 333), "menu_2": (1000, 509)},
             "next_7": {"coords": (1000, 350), "menu_2": (1000, 528)}
@@ -47,8 +49,9 @@ MAPA_UI = {
         },
         "action_no_match": {
             "continue": (522, 483),
-            "show_warning": (522, 505),
-            "show_warning_insert": (522, 553)
+            "show_warning": (522, 506),
+            "show_warning_insert": (522, 553),
+            "show_warning_clear": (522, 600)
         }
     },
     
