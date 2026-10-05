@@ -34,7 +34,7 @@ def calcular_prefijo(nombre_pantalla, data_type="texto"):
         return ""
     global indice_comodines_num, indice_comodines_txt, memoria_comodines
     nombre_limpio = limpiar_texto(nombre_pantalla)
-    if nombre_limpio == "cantidad": return "cn#"
+    if "cantidad" in nombre_limpio: return "cn#"
     
     if nombre_limpio in memoria_comodines:
         return memoria_comodines[nombre_limpio]
