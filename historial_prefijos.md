@@ -1,0 +1,123 @@
+# Historial de Prefijos (Deprecados)
+
+Estos prefijos se utilizaban anteriormente por el bot para adivinar el prefijo basado en el nombre de la variable. Ahora, la aplicación web envía los prefijos de manera explícita (e.g. <mb#>)
+
+- fecha de caducidad -> fc#
+- fecha caducidad -> fc#
+- fecha de vencimiento -> fc#
+- caduccion -> fc#
+- vencimiento -> fc#
+- caducidad -> fc#
+- expiracion -> fc#
+- cad -> fc#
+- numero de serie -> nse#
+- numero serial -> nse#
+- serial number -> nse#
+- series -> nse#
+- serie -> nse#
+- serial -> nse#
+- sn -> nse#
+- registro aduanero -> ped#
+- mercancia importada -> ped#
+- importacion -> ped#
+- aduana -> ped#
+- pedimento -> ped#
+- numero de matricula -> ic#
+- matricula -> ic#
+- lpn -> ic#
+- codigo de barras -> cba#
+- codigo de barra -> cba#
+- barras -> cba#
+- ean -> cba#
+- upc -> cba#
+- codigo interno -> ps#
+- codigo cliente -> ps#
+- clave -> ps#
+- interno -> ps#
+- descripcion de articulo -> ds#
+- descripcion -> ds#
+- descrip -> ds#
+- id terminal -> ter#
+- ns del scaner -> ter#
+- scanner -> ter#
+- escaner -> ter#
+- terminal -> ter#
+- marcas -> mca#
+- marca -> mca#
+- modelos -> mod#
+- modelo -> mod#
+- lotes -> lt#
+- lote -> lt#
+- batch -> lt#
+- marbetes -> mb#
+- marbete -> mb#
+- tallas -> tal#
+- talla -> tal#
+- cajas -> caj#
+- caja -> caj#
+- areas -> ar#
+- area -> ar#
+- colores -> col#
+- color -> col#
+- ubicacion -> ubi#
+- sku -> sk#
+- sk -> sk#
+- sap -> sk#
+- articulo -> sk#
+- item -> sk#
+- producto -> sk#
+- codigo de producto -> sk#
+- cve -> sk#
+- estado -> est#
+- condicion -> est#
+- estatus -> est#
+- departamento -> dep#
+- depto -> dep#
+- familia -> dep#
+- clase -> dep#
+- seccion -> dep#
+- unidades de medida -> uni#
+- unidad de medida -> uni#
+- unidades -> uni#
+- unidad -> uni#
+- medida -> uni#
+- centimetro -> cn#
+- cm -> cn#
+- milimetro -> cn#
+- mm -> cn#
+- milla -> cn#
+- mi -> cn#
+- yarda -> cn#
+- yd -> cn#
+- pie -> cn#
+- ft -> cn#
+- pulgada -> cn#
+- in -> cn#
+- metro -> cn#
+- metros -> cn#
+- mts -> cn#
+- kilometro -> cn#
+- km -> cn#
+- decimetro -> cn#
+- dm -> cn#
+- tonelada -> cn#
+- kilogramo -> cn#
+- kilos -> cn#
+- kg -> cn#
+- gramo -> cn#
+- gramos -> cn#
+- gr -> cn#
+- miligramo -> cn#
+- miligramos -> cn#
+- mg -> cn#
+- libra -> cn#
+- lb -> cn#
+- onza -> cn#
+- oz -> cn#
+- grano -> cn#
+- litros -> cn#
+- galones -> cn#
+- kl -> cn#
+- ml -> cn#
+- cantidad -> cn#
+- conteo -> cn#

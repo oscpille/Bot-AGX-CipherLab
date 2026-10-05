@@ -7,7 +7,7 @@ import pyperclip
 import unicodedata
 import os
 from datetime import datetime
-from config import DICCIONARIO_PREFIJOS, MAPA_UI
+from config import MAPA_UI
 from extractor_datos import limpiar_texto
 
 def quitar_acentos(texto):
@@ -34,11 +34,8 @@ def calcular_prefijo(nombre_pantalla, data_type="texto"):
         return ""
     global indice_comodines_num, indice_comodines_txt, memoria_comodines
     nombre_limpio = limpiar_texto(nombre_pantalla)
+    if nombre_limpio == "cantidad": return "cn#"
     
-    for clave, prefijo in DICCIONARIO_PREFIJOS.items():
-        if re.search(rf'\b{clave}\b', nombre_limpio):
-            return prefijo + "#"
-            
     if nombre_limpio in memoria_comodines:
         return memoria_comodines[nombre_limpio]
         
@@ -641,7 +638,7 @@ def ejecutar_bot(datos):
                     else:
                         num_field = 0
                     p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
-                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'))
+                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'), prefijo_forzado=v_info.get('prefijo_extraido'))
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     escribir_celda(6, "pause", "[ENTER] O [ESC]")
@@ -723,11 +720,11 @@ def ejecutar_bot(datos):
                     else:
                         num_field = 0
                     p_text = f"{v_info['nombre_pantalla'].upper()}: " if v_info['nombre_pantalla'] else ""
-                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'))
+                    escribir_celda(r_idx + 1, v_info['tipo'], p_text, v_info['longitud'].split('-')[0], v_info['longitud'].split('-')[1], num_field, input_mark_char="_", input_type=v_info.get('input_type', 'both'), prefijo_forzado=v_info.get('prefijo_extraido'))
                 if es_ultima:
                     for v_blank in range(len(rebanada) + 1, 6): escribir_celda(v_blank, "nil", "")
                     c_min, c_max = info_cantidad['longitud'].split('-')
-                    escribir_celda(6, info_cantidad['tipo'], f"{info_cantidad['nombre_pantalla']}: ", c_min, c_max, input_mark_char="_")
+                    escribir_celda(6, info_cantidad['tipo'], f"{info_cantidad['nombre_pantalla']}: ", c_min, c_max, input_mark_char="_", prefijo_forzado=info_cantidad.get('prefijo_extraido'))
                     escribir_celda(7, "pause", "[ENTER] O [ESC]")
                 else:
                     for v_blank in range(len(rebanada) + 1, 7): escribir_celda(v_blank, "nil", "")

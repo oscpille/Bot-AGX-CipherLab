@@ -146,6 +146,13 @@ def procesar_solicitud(solicitud):
                 todas_las_vars_dict[f'__page_break_{page_break_count}__'] = {'is_page_break': True}
                 page_break_count += 1
                 continue
+            prefijo_extraido = None
+            import re
+            match_prefijo = re.match(r"^<([^>]+)>\s*", linea)
+            if match_prefijo:
+                prefijo_extraido = match_prefijo.group(1).strip()
+                linea = linea[match_prefijo.end():]
+
             
             linea_limpia = linea.lower().replace(',', '').replace('.', '').replace(';', '')
             nombre_original = re.sub(r'(\d+)\s*(?:-|a|al|maximo|máximo)\s*(\d+)', '', linea).strip()
@@ -225,7 +232,8 @@ def procesar_solicitud(solicitud):
                 'es_catalogo': es_catalogo,
                 'id_catalogo': id_catalogo,
                 'es_bucle': es_bucle,
-                'input_type': input_type
+            'input_type': input_type,
+            'prefijo_extraido': prefijo_extraido
             }
             
             todas_las_vars_dict[nombre_logico] = datos
@@ -282,13 +290,9 @@ def procesar_solicitud(solicitud):
                     v['lookup_file'] = '3rd_lookup'
                     
         # Filter volumen
-        from config import DICCIONARIO_PREFIJOS
         def es_prefijo_con(nombre):
             nm = limpiar_texto(nombre)
-            for c, p in DICCIONARIO_PREFIJOS.items():
-                if re.search(rf'\b{c}\b', nm):
-                    return p == "con"
-            return False
+            return "cantidad" in nm or "volumen" in nm or "conteo" in nm
             
         vars_volumen = [v for v in listado_vars if v.get('is_page_break') or not es_prefijo_con(v.get('nombre_pantalla', ''))]
 
