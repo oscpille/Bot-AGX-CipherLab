@@ -351,7 +351,7 @@ def abrir_programa_y_plantilla(modelo):
         pyautogui.click(MAPA_UI["barra_superior"]["file"])
         time.sleep(0.50) 
         pyautogui.click(MAPA_UI["barra_superior"]["open"])
-        time.sleep(1.0) 
+        time.sleep(1.50) 
         
         pyautogui.write(plantilla_path)
         time.sleep(0.40)
@@ -390,7 +390,7 @@ def guardar_trabajo_final(modelo, cliente, tipo_agx, telefono=""):
     pyautogui.click(MAPA_UI["barra_superior"]["file"])
     time.sleep(0.24)
     pyautogui.click(MAPA_UI["barra_superior"]["save_as"])
-    time.sleep(0.70) 
+    time.sleep(1.20) 
     
     pyautogui.write(full_save_path)
     time.sleep(0.26)
