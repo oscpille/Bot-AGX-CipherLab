@@ -244,8 +244,8 @@ def procesar_solicitud(solicitud):
         for k, v in todas_las_vars_dict.items():
             if "cantidad" in k: 
                 info_cantidad = v  
-            info_cantidad['nombre_pantalla'] = 'Cantidad'
-            info_cantidad['prefijo_extraido'] = 'cn#'
+                info_cantidad['nombre_pantalla'] = 'Cantidad'
+                info_cantidad['prefijo_extraido'] = 'cn#'
                 claves_a_borrar.append(k)
                 
         for k in claves_a_borrar:

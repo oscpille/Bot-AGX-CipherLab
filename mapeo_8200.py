@@ -82,7 +82,7 @@ MAPA_UI = {
             "columnas_x": {
                 "data_type": 520,
                 "prompt": 640,
-                "input_type": 675,
+                "input_type": 760,
                 "min_length": 840,
                 "max_length": 920,
                 "variables_field": 1000,
