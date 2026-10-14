@@ -158,16 +158,14 @@ def escribir_celda(row_idx, data_type, prompt_text, min_len="", max_len="", num_
             time.sleep(0.05)
         
     if data_type.lower() not in ["lookup", "prompt", "pause"]:
-        if min_len:
-            pyautogui.click(columnas["min_length"], y_actual, clicks=2, interval=0.05); time.sleep(0.04)
-            pyautogui.press('backspace')
-            pyautogui.write(min_len, interval=0.02)
-            pyautogui.press('enter'); time.sleep(0.03)
         if max_len:
             pyautogui.click(columnas["max_length"], y_actual, clicks=2, interval=0.05); time.sleep(0.04)
             pyautogui.press('backspace')
             pyautogui.write(max_len, interval=0.02)
-            pyautogui.press('enter'); time.sleep(0.03)
+        if min_len:
+            pyautogui.click(columnas["min_length"], y_actual, clicks=2, interval=0.05); time.sleep(0.04)
+            pyautogui.press('backspace')
+            pyautogui.write(min_len, interval=0.02)
         
     if input_type != "both" and data_type.lower() not in ["nil", "prompt", "pause", "lookup"]:
         pyautogui.click(columnas["input_type"], y_actual, clicks=2, interval=0.05); time.sleep(0.04)
