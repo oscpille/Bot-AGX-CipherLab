@@ -1,5 +1,13 @@
 import sys
 import os
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import time
 import base64
 import requests
@@ -8,6 +16,8 @@ import tkinter as tk
 import json
 import logging
 import warnings
+import atexit
+import signal
 # Suprimir warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="google.cloud")
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
@@ -91,7 +101,24 @@ def preguntar_al_usuario(root, cantidad):
     return resultado[0]
 
 
+nueva_solicitud_event = threading.Event()
+
+def marcar_desconectado():
+    """Marca el bot como desconectado en Supabase (ultimo_latido = 0) al apagarse."""
+    if db:
+        try:
+            db.table('configuracion').upsert({
+                'id': 'estado_servidor',
+                'ultimo_latido': 0
+            }).execute()
+            print("🔴 Bot marcado como Fuera de Línea en Supabase.")
+        except Exception:
+            pass
+
+atexit.register(marcar_desconectado)
+
 def actualizar_latido():
+    """Latido de vida cada 2 minutos (120s) para confirmar que la PC sigue encendida."""
     while True:
         if db:
             try:
@@ -101,7 +128,39 @@ def actualizar_latido():
                 }).execute()
             except Exception:
                 pass
-        time.sleep(60)
+        time.sleep(120)
+
+def escuchar_tiempo_real():
+    """Escucha eventos en tiempo real (WebSockets) de Supabase para despertar al bot al instante."""
+    async def _runner():
+        from supabase import create_async_client
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY")
+        if not url or not key:
+            return
+        while True:
+            try:
+                client = await create_async_client(url, key)
+                def on_change(payload):
+                    rec = payload.get('new') or {}
+                    if rec.get('Status_AGX') == 'Solicitado':
+                        print("\n⚡ [Realtime] Nueva solicitud recibida vía web. Despertando bot al instante...")
+                        nueva_solicitud_event.set()
+                channel = client.channel('bot_agx_watch')
+                channel.on_postgres_changes('INSERT', schema='public', table='AGX', callback=on_change)
+                await channel.subscribe()
+                print("📡 Conexión en tiempo real (WebSockets) establecida. Esperando solicitudes sin consumir peticiones.")
+                while True:
+                    await asyncio.sleep(60)
+            except Exception as e:
+                # En caso de caída de internet o reconexión
+                await asyncio.sleep(15)
+
+    try:
+        import asyncio
+        asyncio.run(_runner())
+    except Exception:
+        pass
 
 def main():
     # Prevenir que Windows entre en modo suspensión (bajo consumo) mientras el bot esté abierto
@@ -121,20 +180,21 @@ def main():
     user32 = ctypes.WinDLL('user32')
     hWnd = kernel32.GetConsoleWindow()
     
-    # Ocultar la consola automáticamente al abrir y deshabilitar su botón "X"
+    # Ocultar la consola automáticamente al abrir pero manteniendo su botón "X" habilitado para emergencias
     if hWnd:
         user32.ShowWindow(hWnd, 0) # SW_HIDE
         hMenu = user32.GetSystemMenu(hWnd, False)
         if hMenu:
-            user32.EnableMenuItem(hMenu, 0xF060, 1) # SC_CLOSE (0xF060) | MF_GRAYED (1)
+            user32.EnableMenuItem(hMenu, 0xF060, 0) # SC_CLOSE (0xF060) | MF_ENABLED (0)
 
     def on_show(icon, item):
-        if hWnd: user32.ShowWindow(hWnd, 5) # SW_SHOW
+        if hWnd: user32.ShowWindow(hWnd, 3) # SW_MAXIMIZE (Pantalla completa)
 
     def on_hide(icon, item):
         if hWnd: user32.ShowWindow(hWnd, 0) # SW_HIDE
         
     def on_quit(icon, item):
+        marcar_desconectado()
         icon.stop()
         os._exit(0)
 
@@ -156,7 +216,19 @@ def main():
     root_tk = tk.Tk()
     root_tk.withdraw()
 
+    # Enviar latido inicial de encendido
+    if db:
+        try:
+            db.table('configuracion').upsert({
+                'id': 'estado_servidor',
+                'ultimo_latido': time.time()
+            }).execute()
+            print("🟢 Bot marcado como En Línea en Supabase.")
+        except Exception:
+            pass
+
     threading.Thread(target=actualizar_latido, daemon=True).start()
+    threading.Thread(target=escuchar_tiempo_real, daemon=True).start()
     print("=====================================================")
     print("      ORQUESTADOR DE BOT AGX INICIADO (MODO VIGÍA)   ")
     print("=====================================================")
@@ -171,12 +243,6 @@ def main():
             continue
             
         try:
-            # Primero consultamos TODOS los registros sin filtrar para ver qué hay realmente en la base de datos
-            debug_resp = db.table('AGX').select('*').execute()
-            print(f"🔎 DEBUG TOTAL FILAS EN LA TABLA: {len(debug_resp.data)}")
-            if len(debug_resp.data) > 0:
-                print(f"🔎 DEBUG PRIMERA FILA (Status): '{debug_resp.data[0].get('Status_AGX')}'")
-
             response = db.table('AGX').select('*').eq('Status_AGX', 'Solicitado').execute()
             todas_las_docs = response.data
             print(f"🔎 DEBUG FILAS 'Solicitado': {len(todas_las_docs)}")
@@ -248,7 +314,9 @@ def main():
             continue
             
         if not solicitudes_pendientes:
-            time.sleep(30)
+            # Esperar a que llegue un evento en tiempo real o sondeo de respaldo cada 5 minutos
+            nueva_solicitud_event.wait(timeout=300)
+            nueva_solicitud_event.clear()
             continue
             
         print(f"\n🔔 Se encontraron {len(solicitudes_pendientes)} solicitudes pendientes.")
@@ -264,6 +332,11 @@ def main():
         # ====================================================
         # INICIA LA RÁFAGA
         # ====================================================
+        # Maximizar la consola de comandos en pantalla completa para monitoreo en vivo
+        if hWnd:
+            user32.ShowWindow(hWnd, 3) # SW_MAXIMIZE (Pantalla completa)
+            user32.SetForegroundWindow(hWnd)
+
         print("\n▶️ Despertando equipo y arrancando motores de automatización...")
         import pyautogui
         import ctypes
@@ -283,6 +356,7 @@ def main():
         
         time.sleep(2.0) # Dar 2 segundos para que la pantalla encienda y reaccione
         
+        hubo_error = False
         for indice, solicitud in enumerate(solicitudes_pendientes, start=1):
             print(f"\n{'-'*50}")
             print(f"🚀 INICIANDO SOLICITUD {indice}/{len(solicitudes_pendientes)}")
@@ -355,6 +429,7 @@ def main():
                 time.sleep(1.0) # Breve pausa para asegurar el cierre antes de la siguiente solicitud
                 
             except Exception as e:
+                hubo_error = True
                 print(f"\n❌ El bot se detuvo en esta solicitud debido a un error: {e}")
                 print("Pausando el bot por 5 minutos antes del próximo intento...")
                 os.system("taskkill /IM ForgeAG.exe /F /T >nul 2>&1")
@@ -362,12 +437,19 @@ def main():
                 time.sleep(300)
                 break
                 
-        print("\n✅ RÁFAGA FINALIZADA. Volviendo a modo vigía...")
-        time.sleep(30) # Espera normal antes del siguiente chequeo
+        if not hubo_error:
+            print("\n✅ RÁFAGA FINALIZADA. Volviendo a modo vigía...")
+            time.sleep(5.0)
+            if hWnd:
+                user32.ShowWindow(hWnd, 0) # SW_HIDE (Ocultar a bandeja del sistema)
+            time.sleep(25) # Espera normal restante antes del siguiente chequeo
+        else:
+            print("\n⚠️ Ráfaga interrumpida por un error. La consola se mantiene visible para revisión.")
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        marcar_desconectado()
         print("\n🛑 Bot detenido manualmente por el usuario. ¡Hasta pronto!")
         sys.exit(0)
